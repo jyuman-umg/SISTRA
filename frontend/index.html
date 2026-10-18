@@ -117,6 +117,54 @@
     </section>
 
     <!-- =====================================================
+         ESTADISTICAS DETALLADAS - FASE 10
+         ===================================================== -->
+
+    <section class="panel" aria-labelledby="statisticsTitle">
+        <h2 id="statisticsTitle">Estadisticas detalladas</h2>
+        <p id="statisticsStatus" class="traffic-details" aria-live="polite">
+            Selecciona una simulacion para consultar sus estadisticas.
+        </p>
+
+        <div class="stats-grid">
+            <article class="stat-card">
+                <span>Tiempo promedio de espera</span>
+                <strong id="averageWait">0.00 s</strong>
+            </article>
+
+            <article class="stat-card">
+                <span>Total de multas</span>
+                <strong id="totalFines">0</strong>
+            </article>
+
+            <article class="stat-card">
+                <span>Monto total de multas</span>
+                <strong id="totalFineAmount">Q0.00</strong>
+            </article>
+        </div>
+
+        <h3>Estadisticas por calle</h3>
+        <div class="table-container">
+            <table>
+                <thead>
+                <tr>
+                    <th>Calle</th>
+                    <th>Total de vehiculos</th>
+                    <th>Finalizados</th>
+                    <th>En espera</th>
+                    <th>Espera promedio</th>
+                </tr>
+                </thead>
+                <tbody id="streetStatisticsTable">
+                <tr>
+                    <td colspan="5">Sin datos de estadisticas.</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- =====================================================
          INTERSECCION 2D - FASE 8
          ===================================================== -->
 

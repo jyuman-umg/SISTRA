@@ -1,6 +1,6 @@
 /* =====================================================
    SISTRA - FRONTEND
-   FASE 8: API REST E INTERSECCION 2D
+   FASE 10: SIMULACION, INTERSECCION 2D Y ESTADISTICAS
    ===================================================== */
 
 const API_BASE = "http://localhost:18080/api";
@@ -20,6 +20,11 @@ const elementos = {
     queuedVehicles: document.getElementById("queuedVehicles"),
     crossingVehicles: document.getElementById("crossingVehicles"),
     finishedVehicles: document.getElementById("finishedVehicles"),
+    averageWait: document.getElementById("averageWait"),
+    totalFines: document.getElementById("totalFines"),
+    totalFineAmount: document.getElementById("totalFineAmount"),
+    streetStatisticsTable: document.getElementById("streetStatisticsTable"),
+    statisticsStatus: document.getElementById("statisticsStatus"),
     trafficLights: document.getElementById("trafficLights"),
     vehiclesTable: document.getElementById("vehiclesTable")
 };
@@ -36,9 +41,15 @@ let estadoSimulacion = null;
 let procesandoSolicitud = false;
 let versionSeleccion = 0;
 
-// Datos utilizados por el Canvas 2D.
 let ultimoEstadoGrafico = null;
 let vehiculosGraficos = [];
+
+const formatoQuetzales = new Intl.NumberFormat("es-GT", {
+    style: "currency",
+    currency: "GTQ",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+});
 
 /* =====================================================
    PETICIONES HTTP
@@ -73,8 +84,7 @@ async function solicitarAPI(ruta, opciones = {}) {
 
     if (!respuesta.ok || datos.success === false) {
         throw new Error(
-            datos.message ||
-            `Error HTTP ${respuesta.status}`
+            datos.message || `Error HTTP ${respuesta.status}`
         );
     }
 
@@ -87,7 +97,6 @@ async function solicitarAPI(ruta, opciones = {}) {
 
 function mostrarMensaje(mensaje, tipo = "") {
     elementos.simulationMessage.textContent = mensaje;
-
     elementos.simulationMessage.className =
         `message ${tipo}`.trim();
 }
@@ -98,38 +107,23 @@ function mostrarMensaje(mensaje, tipo = "") {
 
 function actualizarBotones() {
     const haySeleccion = simulacionSeleccionada !== null;
+    const configurada = estadoSimulacion === "Configurada";
+    const ejecutando = estadoSimulacion === "Ejecutando";
 
-    const configurada =
-        estadoSimulacion === "Configurada";
-
-    const ejecutando =
-        estadoSimulacion === "Ejecutando";
-
-    elementos.simulationSelect.disabled =
-        procesandoSolicitud;
-
-    elementos.refreshButton.disabled =
-        procesandoSolicitud;
+    elementos.simulationSelect.disabled = procesandoSolicitud;
+    elementos.refreshButton.disabled = procesandoSolicitud;
 
     elementos.startButton.disabled =
-        procesandoSolicitud ||
-        !haySeleccion ||
-        !configurada;
+        procesandoSolicitud || !haySeleccion || !configurada;
 
     elementos.advanceButton.disabled =
-        procesandoSolicitud ||
-        !haySeleccion ||
-        !ejecutando;
+        procesandoSolicitud || !haySeleccion || !ejecutando;
 
     elementos.advanceMultipleButton.disabled =
-        procesandoSolicitud ||
-        !haySeleccion ||
-        !ejecutando;
+        procesandoSolicitud || !haySeleccion || !ejecutando;
 
     elementos.secondsInput.disabled =
-        procesandoSolicitud ||
-        !haySeleccion ||
-        !ejecutando;
+        procesandoSolicitud || !haySeleccion || !ejecutando;
 }
 
 async function ejecutarOperacion(operacion) {
@@ -156,34 +150,26 @@ async function ejecutarOperacion(operacion) {
 
 async function verificarServidor() {
     try {
-        const respuesta = await fetch(
-            `${API_BASE}/health`
-        );
+        const respuesta = await fetch(`${API_BASE}/health`);
 
         if (!respuesta.ok) {
             throw new Error("Servidor no disponible");
         }
 
-        elementos.serverIndicator.className =
-            "status-dot online";
-
-        elementos.serverStatus.textContent =
-            "Servidor conectado";
+        elementos.serverIndicator.className = "status-dot online";
+        elementos.serverStatus.textContent = "Servidor conectado";
 
         return true;
     } catch (error) {
-        elementos.serverIndicator.className =
-            "status-dot offline";
-
-        elementos.serverStatus.textContent =
-            "Servidor desconectado";
+        elementos.serverIndicator.className = "status-dot offline";
+        elementos.serverStatus.textContent = "Servidor desconectado";
 
         return false;
     }
 }
 
 /* =====================================================
-   ESTADISTICAS
+   ESTADISTICAS GENERALES
    ===================================================== */
 
 function reiniciarEstadisticas() {
@@ -209,6 +195,120 @@ function actualizarEstadisticas(datos) {
 
     elementos.finishedVehicles.textContent =
         datos.finalizados ?? 0;
+}
+
+/* =====================================================
+   ESTADISTICAS DETALLADAS - FASE 10
+   ===================================================== */
+
+function reiniciarEstadisticasDetalladas() {
+    elementos.averageWait.textContent = "0.00 s";
+    elementos.totalFines.textContent = "0";
+    elementos.totalFineAmount.textContent =
+        formatoQuetzales.format(0);
+
+    elementos.statisticsStatus.textContent =
+        "Selecciona una simulacion para consultar sus estadisticas.";
+
+    const fila = document.createElement("tr");
+    const celda = document.createElement("td");
+
+    celda.colSpan = 5;
+    celda.textContent = "Sin datos de estadisticas.";
+
+    fila.appendChild(celda);
+
+    elementos.streetStatisticsTable.replaceChildren(fila);
+}
+
+function mostrarEstadisticasDetalladas(datos) {
+    const estadisticas = datos.estadisticas || {};
+    const multas = estadisticas.multas || {};
+
+    elementos.averageWait.textContent =
+        `${Number(
+            estadisticas.tiempoPromedioEsperaSegundos ?? 0
+        ).toFixed(2)} s`;
+
+    elementos.totalFines.textContent =
+        multas.totalMultas ?? 0;
+
+    elementos.totalFineAmount.textContent =
+        formatoQuetzales.format(
+            Number(multas.montoTotal ?? 0)
+        );
+
+    const filas = [];
+
+    for (const calle of estadisticas.calles || []) {
+        const fila = document.createElement("tr");
+
+        fila.appendChild(crearCelda(calle.nombre));
+        fila.appendChild(crearCelda(calle.totalVehiculos ?? 0));
+        fila.appendChild(crearCelda(calle.finalizados ?? 0));
+        fila.appendChild(crearCelda(calle.enCola ?? 0));
+
+        fila.appendChild(
+            crearCelda(
+                `${Number(
+                    calle.tiempoPromedioEsperaSegundos ?? 0
+                ).toFixed(2)} s`
+            )
+        );
+
+        filas.push(fila);
+    }
+
+    if (filas.length === 0) {
+        const fila = document.createElement("tr");
+        const celda = document.createElement("td");
+
+        celda.colSpan = 5;
+        celda.textContent = "No hay estadisticas por calle.";
+
+        fila.appendChild(celda);
+        filas.push(fila);
+    }
+
+    elementos.streetStatisticsTable.replaceChildren(...filas);
+
+    elementos.statisticsStatus.textContent =
+        `Estadisticas actualizadas: ${
+            datos.nombreSimulacion || "simulacion seleccionada"
+        }.`;
+}
+
+async function consultarEstadisticasDetalladas(
+    idSimulacion,
+    versionActual = versionSeleccion
+) {
+    elementos.statisticsStatus.textContent =
+        "Consultando estadisticas...";
+
+    try {
+        const datos = await solicitarAPI(
+            `/simulaciones/${idSimulacion}/estadisticas`
+        );
+
+        if (
+            simulacionSeleccionada !== idSimulacion ||
+            versionActual !== versionSeleccion
+        ) {
+            return;
+        }
+
+        mostrarEstadisticasDetalladas(datos);
+    } catch (error) {
+        if (
+            simulacionSeleccionada === idSimulacion &&
+            versionActual === versionSeleccion
+        ) {
+            elementos.statisticsStatus.textContent =
+                `No se pudieron consultar las estadisticas: ${
+                    error.message
+                }`;
+        }
+    }
 }
 
 /* =====================================================
@@ -243,17 +343,9 @@ function crearTarjetaSemaforo(calle) {
     const semaforo = document.createElement("div");
     semaforo.className = "traffic-light";
 
-    semaforo.appendChild(
-        crearLuz("red", calle.estado)
-    );
-
-    semaforo.appendChild(
-        crearLuz("yellow", calle.estado)
-    );
-
-    semaforo.appendChild(
-        crearLuz("green", calle.estado)
-    );
+    semaforo.appendChild(crearLuz("red", calle.estado));
+    semaforo.appendChild(crearLuz("yellow", calle.estado));
+    semaforo.appendChild(crearLuz("green", calle.estado));
 
     const estado = document.createElement("p");
     estado.className = "traffic-state";
@@ -319,7 +411,7 @@ function mostrarSemaforosIniciales() {
 }
 
 /* =====================================================
-   INTERSECCION 2D - FASE 8
+   INTERSECCION 2D
    ===================================================== */
 
 function obtenerRenderizador() {
@@ -381,15 +473,15 @@ function crearCelda(texto) {
 function mostrarVehiculos(vehiculos) {
     elementos.vehiclesTable.replaceChildren();
 
-    if (!Array.isArray(vehiculos) ||
-        vehiculos.length === 0) {
-
+    if (
+        !Array.isArray(vehiculos) ||
+        vehiculos.length === 0
+    ) {
         const fila = document.createElement("tr");
         const celda = document.createElement("td");
 
         celda.colSpan = 6;
-        celda.textContent =
-            "No hay vehiculos registrados.";
+        celda.textContent = "No hay vehiculos registrados.";
 
         fila.appendChild(celda);
         elementos.vehiclesTable.appendChild(fila);
@@ -400,17 +492,9 @@ function mostrarVehiculos(vehiculos) {
     for (const vehiculo of vehiculos) {
         const fila = document.createElement("tr");
 
-        fila.appendChild(
-            crearCelda(vehiculo.placa)
-        );
-
-        fila.appendChild(
-            crearCelda(vehiculo.tipoVehiculo)
-        );
-
-        fila.appendChild(
-            crearCelda(vehiculo.calle)
-        );
+        fila.appendChild(crearCelda(vehiculo.placa));
+        fila.appendChild(crearCelda(vehiculo.tipoVehiculo));
+        fila.appendChild(crearCelda(vehiculo.calle));
 
         fila.appendChild(
             crearCelda(`${vehiculo.velocidad} km/h`)
@@ -424,8 +508,7 @@ function mostrarVehiculos(vehiculos) {
                 vehiculo.estado || ""
             ).toLowerCase()}`;
 
-        etiqueta.textContent =
-            vehiculo.estado || "-";
+        etiqueta.textContent = vehiculo.estado || "-";
 
         celdaEstado.appendChild(etiqueta);
         fila.appendChild(celdaEstado);
@@ -505,6 +588,7 @@ async function seleccionarSimulacion() {
         estadoSimulacion = null;
 
         reiniciarEstadisticas();
+        reiniciarEstadisticasDetalladas();
         mostrarSemaforosIniciales();
         mostrarVehiculos([]);
         reiniciarInterseccion();
@@ -521,6 +605,7 @@ async function seleccionarSimulacion() {
     estadoSimulacion = null;
 
     reiniciarEstadisticas();
+    reiniciarEstadisticasDetalladas();
     mostrarSemaforosIniciales();
     mostrarVehiculos([]);
     reiniciarInterseccion();
@@ -549,6 +634,15 @@ async function seleccionarSimulacion() {
             return;
         }
 
+        await consultarEstadisticasDetalladas(
+            id,
+            versionActual
+        );
+
+        if (versionActual !== versionSeleccion) {
+            return;
+        }
+
         if (estadoSimulacion === "Ejecutando") {
             const estado = await consultarEstado(id);
 
@@ -563,7 +657,6 @@ async function seleccionarSimulacion() {
                     `Simulacion seleccionada: ${datos.data.nombre}`
                 );
             }
-
         } else {
             mostrarEstadoInterseccion(
                 estadoSimulacion === "Finalizada"
@@ -578,7 +671,6 @@ async function seleccionarSimulacion() {
                 `Simulacion seleccionada: ${datos.data.nombre}`
             );
         }
-
     } catch (error) {
         if (versionActual === versionSeleccion) {
             mostrarMensaje(error.message, "error");
@@ -597,21 +689,16 @@ async function seleccionarSimulacion() {
 async function cargarSimulaciones() {
     const datos = await solicitarAPI("/simulaciones");
 
-    const seleccionAnterior =
-        simulacionSeleccionada;
+    const seleccionAnterior = simulacionSeleccionada;
 
     elementos.simulationSelect.replaceChildren();
 
-    const opcionInicial =
-        document.createElement("option");
+    const opcionInicial = document.createElement("option");
 
     opcionInicial.value = "";
-    opcionInicial.textContent =
-        "Selecciona una simulacion";
+    opcionInicial.textContent = "Selecciona una simulacion";
 
-    elementos.simulationSelect.appendChild(
-        opcionInicial
-    );
+    elementos.simulationSelect.appendChild(opcionInicial);
 
     for (const simulacion of datos.data || []) {
         const opcion = document.createElement("option");
@@ -622,9 +709,7 @@ async function cargarSimulaciones() {
             `#${simulacion.idSimulacion} - ` +
             `${simulacion.nombre} (${simulacion.estado})`;
 
-        elementos.simulationSelect.appendChild(
-            opcion
-        );
+        elementos.simulationSelect.appendChild(opcion);
     }
 
     if (seleccionAnterior !== null) {
@@ -670,10 +755,10 @@ async function iniciarSimulacion() {
 
         actualizarEstadisticas(datos);
         mostrarSemaforos(datos);
-
         guardarEstadoGrafico(datos);
 
         await consultarVehiculos(id);
+        await consultarEstadisticasDetalladas(id);
 
         mostrarMensaje(
             datos.message ||
@@ -713,20 +798,17 @@ async function avanzarSimulacion(segundos) {
             });
         }
 
-        const datos = await solicitarAPI(
-            ruta,
-            opciones
-        );
+        const datos = await solicitarAPI(ruta, opciones);
 
         estadoSimulacion =
             datos.estadoSimulacion || "Ejecutando";
 
         actualizarEstadisticas(datos);
         mostrarSemaforos(datos);
-
         guardarEstadoGrafico(datos);
 
         await consultarVehiculos(id);
+        await consultarEstadisticasDetalladas(id);
 
         mostrarMensaje(
             datos.message ||
@@ -770,18 +852,17 @@ elementos.advanceButton.addEventListener(
 elementos.advanceMultipleButton.addEventListener(
     "click",
     () => {
-        const segundos =
-            Number(elementos.secondsInput.value);
+        const segundos = Number(elementos.secondsInput.value);
 
-        if (!Number.isInteger(segundos) ||
+        if (
+            !Number.isInteger(segundos) ||
             segundos < 1 ||
-            segundos > 3600) {
-
+            segundos > 3600
+        ) {
             mostrarMensaje(
                 "Ingresa una cantidad entre 1 y 3600.",
                 "error"
             );
-
             return;
         }
 
@@ -795,6 +876,7 @@ elementos.advanceMultipleButton.addEventListener(
 
 async function inicializar() {
     reiniciarEstadisticas();
+    reiniciarEstadisticasDetalladas();
     mostrarSemaforosIniciales();
     mostrarVehiculos([]);
     reiniciarInterseccion();

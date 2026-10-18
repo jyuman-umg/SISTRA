@@ -1,6 +1,7 @@
 #include "routes/SimulacionRoutes.h"
 #include "database/DatabaseConnection.h"
 #include "simulation/SimulationEngine.h"
+#include "statistics/StatisticsService.h"
 #include "traffic/SpeedControlService.h"
 #include <algorithm>
 #include <cmath>
@@ -1353,6 +1354,58 @@ void registerSimulacionRoutes(crow::App<crow::CORSHandler>& app) {
         return advanceSimulation(
             idSimulacion, segundos
         );
+    });
+
+    // =====================================================
+    // FASE 10: ESTADISTICAS DE SIMULACION
+    // =====================================================
+
+    CROW_ROUTE(app, "/api/simulaciones/<int>/estadisticas")
+    .methods(crow::HTTPMethod::GET)
+    ([](int idSimulacion) {
+        if (idSimulacion <= 0) {
+            return errorResponse(
+                400, "Identificador de simulacion invalido"
+            );
+        }
+
+        DatabaseConnection db;
+
+        if (!connectDatabase(db)) {
+            return errorResponse(
+                503, "No se pudo conectar con MySQL"
+            );
+        }
+
+        try {
+            const auto simulaciones = db.selectPrepared(
+                "SELECT IdSimulacion FROM Simulaciones "
+                "WHERE IdSimulacion = ?",
+                {std::to_string(idSimulacion)}
+            );
+
+            if (simulaciones.empty()) {
+                return errorResponse(
+                    404, "La simulacion no existe"
+                );
+            }
+
+            crow::json::wvalue response =
+                StatisticsService::obtenerEstadisticas(
+                    db, idSimulacion
+                );
+
+            return crow::response(200, response);
+
+        } catch (const std::exception& error) {
+            std::cerr
+                << "Error consultando estadisticas: "
+                << error.what() << std::endl;
+
+            return errorResponse(
+                500, "Error al consultar estadisticas de la simulacion"
+            );
+        }
     });
 
     // =====================================================
