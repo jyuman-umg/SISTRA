@@ -1,0 +1,470 @@
+/* =====================================================
+   SISTRA - ESTILOS GENERALES
+   ===================================================== */
+
+:root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --background: #f1f5f9;
+    --surface: #ffffff;
+    --text: #0f172a;
+    --text-secondary: #64748b;
+    --border: #e2e8f0;
+
+    --green: #16a34a;
+    --yellow: #eab308;
+    --red: #dc2626;
+
+    --radius: 12px;
+    --shadow: 0 4px 16px rgba(15, 23, 42, 0.06);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    background: var(--background);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.5;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+/* =====================================================
+   ENCABEZADO
+   ===================================================== */
+
+.header {
+    background: #0f172a;
+    color: white;
+    padding: 22px 5%;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.brand h1 {
+    font-size: 30px;
+    letter-spacing: 2px;
+    color: #60a5fa;
+}
+
+.brand p {
+    font-size: 13px;
+    color: #cbd5e1;
+    margin-top: 4px;
+}
+
+.server-status {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+.status-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #94a3b8;
+}
+
+.status-dot.online {
+    background: var(--green);
+    box-shadow: 0 0 8px rgba(22, 163, 74, 0.4);
+}
+
+.status-dot.offline {
+    background: var(--red);
+}
+
+/* =====================================================
+   CONTENEDOR Y PANELES
+   ===================================================== */
+
+.container {
+    width: min(1200px, 92%);
+    margin: 30px auto;
+}
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    margin-bottom: 24px;
+    box-shadow: var(--shadow);
+}
+
+.panel h2 {
+    font-size: 19px;
+    margin-bottom: 20px;
+    color: #1e293b;
+}
+
+/* =====================================================
+   CONTROLES DE SIMULACION
+   ===================================================== */
+
+.simulation-controls,
+.simulation-actions {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    flex-wrap: wrap;
+}
+
+.simulation-actions {
+    margin-top: 18px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.field label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+}
+
+.simulation-controls .field {
+    flex: 1;
+    min-width: 220px;
+}
+
+select,
+input {
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: white;
+    color: var(--text);
+    outline: none;
+}
+
+select:focus,
+input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+#secondsInput {
+    width: 120px;
+}
+
+/* =====================================================
+   BOTONES
+   ===================================================== */
+
+.button {
+    min-height: 42px;
+    padding: 10px 18px;
+    border: none;
+    border-radius: 8px;
+
+    font-size: 14px;
+    font-weight: 600;
+
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+}
+
+.button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.button-primary {
+    background: var(--primary);
+    color: white;
+}
+
+.button-primary:hover:not(:disabled) {
+    background: var(--primary-hover);
+}
+
+.button-secondary {
+    background: #e2e8f0;
+    color: #334155;
+}
+
+.button-secondary:hover:not(:disabled) {
+    background: #cbd5e1;
+}
+
+.message {
+    margin-top: 16px;
+    font-size: 13px;
+    min-height: 20px;
+    color: var(--text-secondary);
+}
+
+.message.success {
+    color: var(--green);
+}
+
+.message.error {
+    color: var(--red);
+}
+
+/* =====================================================
+   TARJETAS DE ESTADISTICAS
+   ===================================================== */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.stat-card span {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+.stat-card strong {
+    font-size: 29px;
+    color: #1e293b;
+}
+
+/* =====================================================
+   SEMAFOROS
+   ===================================================== */
+
+.traffic-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+}
+
+.traffic-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    background: #f8fafc;
+}
+
+.traffic-card h3 {
+    font-size: 16px;
+    margin-bottom: 15px;
+}
+
+.traffic-light {
+    background: #1e293b;
+    border-radius: 14px;
+    width: 66px;
+    padding: 11px;
+    margin: 0 auto 15px;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.light {
+    width: 39px;
+    height: 39px;
+    border-radius: 50%;
+    background: #475569;
+    opacity: 0.25;
+}
+
+.light.red.active {
+    background: var(--red);
+    opacity: 1;
+    box-shadow: 0 0 14px rgba(220, 38, 38, 0.7);
+}
+
+.light.yellow.active {
+    background: var(--yellow);
+    opacity: 1;
+    box-shadow: 0 0 14px rgba(234, 179, 8, 0.7);
+}
+
+.light.green.active {
+    background: var(--green);
+    opacity: 1;
+    box-shadow: 0 0 14px rgba(22, 163, 74, 0.7);
+}
+
+.traffic-state {
+    font-weight: 700;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.traffic-details {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* =====================================================
+   TABLA DE VEHICULOS
+   ===================================================== */
+
+.table-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+thead {
+    background: #f1f5f9;
+}
+
+th,
+td {
+    padding: 13px 15px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+th {
+    color: #475569;
+    font-weight: 600;
+}
+
+tbody tr:hover {
+    background: #f8fafc;
+}
+
+.vehicle-status {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.vehicle-status.finalizado {
+    background: #dcfce7;
+    color: #166534;
+}
+
+.vehicle-status.cruzando {
+    background: #dbeafe;
+    color: #1d4ed8;
+}
+
+.vehicle-status.encola {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+/* =====================================================
+   PIE DE PAGINA
+   ===================================================== */
+
+.footer {
+    text-align: center;
+    padding: 25px;
+    color: var(--text-secondary);
+    font-size: 12px;
+}
+
+/* =====================================================
+   DISEÑO RESPONSIVO
+   ===================================================== */
+
+@media (max-width: 1000px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .traffic-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 600px) {
+    .header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .container {
+        width: 94%;
+        margin: 18px auto;
+    }
+
+    .panel {
+        padding: 18px;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+
+    .stat-card {
+        padding: 15px;
+    }
+
+    .stat-card strong {
+        font-size: 24px;
+    }
+
+    .traffic-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .simulation-controls,
+    .simulation-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .simulation-controls .field,
+    #secondsInput {
+        width: 100%;
+    }
+
+    .button {
+        width: 100%;
+    }
+}
