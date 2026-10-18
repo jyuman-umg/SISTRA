@@ -602,7 +602,7 @@ namespace {
 
 }
 
-void registerSimulacionRoutes(crow::SimpleApp& app) {
+void registerSimulacionRoutes(crow::App<crow::CORSHandler>& app) {
 
     // =====================================================
     // FASE 4: ASIGNAR VEHICULO A SIMULACION

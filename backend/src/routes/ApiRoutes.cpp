@@ -17,7 +17,7 @@ namespace {
 
 }
 
-void registerApiRoutes(crow::SimpleApp& app) {
+void registerApiRoutes(crow::App<crow::CORSHandler>& app) {
 
     // =====================================================
     // ENDPOINT: ESTADO DEL SERVIDOR

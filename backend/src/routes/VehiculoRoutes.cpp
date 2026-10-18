@@ -133,7 +133,7 @@ namespace {
 
 }
 
-void registerVehiculoRoutes(crow::SimpleApp& app) {
+void registerVehiculoRoutes(crow::App<crow::CORSHandler>& app) {
 
     // =====================================================
     // ENDPOINT: CONSULTAR TODOS LOS VEHICULOS
