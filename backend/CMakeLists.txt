@@ -12,6 +12,7 @@ add_executable(SISTRA
         src/routes/VehiculoRoutes.cpp
         src/routes/SimulacionRoutes.cpp
         src/simulation/SimulationEngine.cpp
+        src/traffic/TrafficLightController.cpp
 )
 
 target_compile_features(SISTRA
