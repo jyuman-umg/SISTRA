@@ -14,6 +14,7 @@ add_executable(SISTRA
         src/simulation/SimulationEngine.cpp
         src/traffic/TrafficLightController.cpp
         src/traffic/SpeedControlService.cpp
+        src/statistics/StatisticsService.cpp
 )
 
 target_compile_features(SISTRA
