@@ -1,6 +1,9 @@
-# PROYECTO 18 Intersección Semaforizada
 
-## VARIANTE A
+# SISTRA - Sistema de Simulación de Tráfico
+
+## PROYECTO 18 - Intersección Semaforizada
+
+### VARIANTE A
 
 **Curso:** Algoritmos  
 **Estudiante:** Jefferson Gadiel Yuman Pérez  
@@ -8,157 +11,445 @@
 
 ## Descripción del proyecto
 
-El proyecto consiste en desarrollar un sistema web de simulación y control de tráfico vehicular en una intersección semaforizada de cuatro calles: Norte, Sur, Este y Oeste.
+SISTRA es un sistema web de simulación y control de tráfico vehicular desarrollado para representar el funcionamiento de una intersección semaforizada de cuatro calles: Norte, Sur, Este y Oeste.
 
-El sistema permitirá registrar vehículos con sus respectivas placas, velocidades, direcciones de procedencia y horarios de llegada. También permitirá generar vehículos automáticamente para simular diferentes niveles de tráfico durante el día.
+El sistema permite registrar vehículos, asignarlos a simulaciones, establecer sus velocidades y segundos de llegada, y observar su comportamiento durante el desarrollo de una simulación.
 
-Mediante una representación gráfica en dos dimensiones (2D), se visualizará el movimiento de los vehículos, la formación de colas y el funcionamiento de los semáforos.
+La aplicación cuenta con un motor de simulación desarrollado en C++ que administra el avance del tiempo, los estados de los vehículos, las colas de tráfico y los cruces de la intersección.
 
-El sistema contará con un algoritmo de control inteligente que analizará la cantidad de vehículos en cada calle para ajustar los tiempos de los semáforos y favorecer las rutas con mayor congestión.
+También incorpora semáforos inteligentes, una representación gráfica bidimensional (2D), cámaras virtuales de control de velocidad, generación de multas y estadísticas del tráfico.
 
-Además, incluirá cámaras de seguridad virtuales para detectar excesos de velocidad, generar multas y almacenar los resultados en una base de datos MySQL.
+La información se almacena en una base de datos MySQL, permitiendo consultar simulaciones, vehículos y resultados incluso después de reiniciar el servidor.
 
 ## Objetivo general
 
 Desarrollar una aplicación web que permita simular y controlar el flujo vehicular de una intersección semaforizada mediante algoritmos implementados en C++, utilizando una interfaz gráfica 2D y una base de datos MySQL.
 
-## Funcionalidades principales
+## Objetivos específicos
 
-- Registro individual de vehículos con placa, velocidad, dirección y horario.
-- Generación automática de vehículos por calle.
-- Simulación de una intersección de cuatro direcciones.
-- Representación gráfica 2D desde una vista superior.
-- Control de semáforos mediante ciclos configurables.
-- Administración de colas de vehículos.
-- Detección de las calles con mayor congestión.
-- Asignación inteligente de tiempos de luz verde.
-- Identificación de los horarios con mayor tráfico.
-- Simulación de cámaras de seguridad.
-- Generación de multas por exceso de velocidad.
-- Cálculo de tiempos de espera y estadísticas acumuladas.
-- Almacenamiento de información en MySQL.
-- Consulta del historial de simulaciones.
+- Registrar y administrar vehículos dentro del sistema.
+- Simular el tránsito vehicular en una intersección de cuatro calles.
+- Administrar los estados y movimientos de los vehículos.
+- Implementar el funcionamiento de semáforos inteligentes.
+- Representar gráficamente la intersección y el movimiento vehicular.
+- Detectar infracciones por exceso de velocidad.
+- Registrar multas mediante cámaras virtuales.
+- Calcular estadísticas del comportamiento del tráfico.
+- Almacenar los resultados de las simulaciones en MySQL.
+- Permitir la consulta de información histórica.
+- Recuperar el estado de simulaciones en ejecución después de reiniciar el backend.
 
-## Listado de tecnologías utilizadas
+## Funcionalidades desarrolladas
 
-### 1. C++20
+### 1. Administración de vehículos
 
-Lenguaje de programación principal del proyecto. Se utilizará para desarrollar el backend, los algoritmos de simulación, la administración de colas, el control de semáforos, el cálculo de estadísticas y la generación de multas.
+SISTRA permite registrar vehículos y consultar la información almacenada.
 
-### 2. Crow
+Cada vehículo puede contar con información como:
 
-Framework de C++ que permite desarrollar aplicaciones web y servicios HTTP. Se utilizará para construir la API REST que permitirá la comunicación entre el frontend y la lógica implementada en C++.
+- Identificador.
+- Placa.
+- Tipo de vehículo.
+- Velocidad.
+- Calle de procedencia.
 
-### 3. CMake
+Los vehículos pueden incorporarse a una simulación configurada indicando su velocidad y segundo de llegada.
 
-Herramienta de configuración y compilación de proyectos C++. Permitirá organizar los archivos del backend, administrar la compilación y facilitar la ejecución desde CLion.
+### 2. Administración de simulaciones
 
-### 4. vcpkg
+El sistema permite consultar las simulaciones registradas y administrar su ejecución.
 
-Administrador de paquetes para C++. Se utilizará para instalar y administrar las bibliotecas externas necesarias, evitando configurar manualmente cada dependencia.
+Las simulaciones utilizan los siguientes estados:
 
-### 5. MySQL 8
+- Configurada.
+- Ejecutando.
+- Finalizada.
 
-Sistema de gestión de bases de datos relacionales. Permitirá almacenar vehículos, calles, simulaciones, configuraciones de semáforos, multas y estadísticas.
+Cada simulación almacena información sobre su duración, hora simulada de inicio, progreso, vehículos y fechas de ejecución.
 
-### 6. MySQL Connector/C++
+### 3. Motor de simulación
 
-Biblioteca que permite conectar aplicaciones desarrolladas en C++ con bases de datos MySQL. Se utilizará para ejecutar consultas y realizar operaciones de almacenamiento y recuperación de información.
+El motor de simulación está desarrollado en C++ y administra el comportamiento de los vehículos dentro de la intersección.
 
-### 7. HTML5
+Entre sus responsabilidades se encuentran:
 
-Lenguaje de marcado utilizado para construir la estructura de las páginas web, formularios, menús, botones y paneles del sistema.
+- Controlar el tiempo simulado.
+- Incorporar vehículos según su segundo de llegada.
+- Administrar las colas de vehículos.
+- Controlar el cruce de la intersección.
+- Actualizar los estados de los vehículos.
+- Registrar los segundos de inicio de cruce y salida.
+- Calcular tiempos de espera.
+- Finalizar las simulaciones cuando corresponde.
 
-### 8. CSS3
+El backend permite avanzar una simulación segundo a segundo o avanzar varios segundos mediante una solicitud HTTP.
 
-Tecnología utilizada para diseñar la apariencia visual de la aplicación, incluyendo colores, tamaños, distribución de elementos, estilos y adaptación a diferentes resoluciones.
+### 4. Semáforos inteligentes
 
-### 9. JavaScript
+SISTRA incorpora lógica para administrar los semáforos de la intersección.
 
-Lenguaje de programación utilizado en el frontend para gestionar las interacciones del usuario, comunicarse con la API REST y actualizar visualmente la simulación.
+El sistema considera el tráfico de las calles para controlar el paso de vehículos y administrar los cruces.
 
-### 10. HTML5 Canvas 2D
+### 5. Visualización gráfica 2D
 
-Tecnología gráfica que permite dibujar elementos y animaciones dentro del navegador. Se utilizará para representar la intersección, las calles, los vehículos, los semáforos y sus movimientos desde una vista superior.
+La aplicación dispone de una interfaz web que representa la intersección desde una vista superior.
 
-### 11. Chart.js
+La visualización permite observar:
 
-Biblioteca de JavaScript utilizada para crear gráficas estadísticas. Permitirá visualizar la cantidad de vehículos, los horarios de mayor tráfico, los tiempos de espera y otros resultados de las simulaciones.
+- Las cuatro calles de la intersección.
+- Los vehículos.
+- El movimiento vehicular.
+- Los semáforos.
+- El desarrollo de la simulación.
 
-### 12. Git
+La representación utiliza tecnologías web y Canvas 2D.
 
-Sistema de control de versiones que permitirá registrar los cambios realizados durante el desarrollo, organizar el trabajo mediante ramas y conservar el historial del proyecto.
+### 6. Control de velocidad y multas
 
-### 13. GitHub
+SISTRA incorpora cámaras virtuales para detectar excesos de velocidad.
 
-Plataforma utilizada para almacenar el repositorio del proyecto, compartir el código fuente, administrar las ramas de desarrollo y facilitar su descarga y revisión.
+Durante la simulación, el sistema verifica las condiciones de velocidad y registra las multas correspondientes.
 
-### 14. CLion
+Las multas se almacenan en MySQL y pueden incluir distintos montos según la infracción.
 
-Entorno de desarrollo integrado (IDE) utilizado para escribir, organizar, compilar, ejecutar y depurar el código C++ del proyecto.
+El sistema también evita volver a registrar una multa ya generada al recuperar y continuar una simulación.
+
+### 7. Estadísticas de tráfico
+
+El sistema permite consultar estadísticas de las simulaciones.
+
+Entre los datos disponibles se encuentran:
+
+- Total de vehículos.
+- Vehículos programados.
+- Vehículos en cola.
+- Vehículos cruzando.
+- Vehículos finalizados.
+- Tiempo promedio de espera.
+- Estadísticas por calle.
+- Total de multas.
+- Monto acumulado de multas.
+
+### 8. Persistencia y recuperación
+
+SISTRA utiliza MySQL para almacenar la información de las simulaciones y sus resultados.
+
+El sistema permite:
+
+- Consultar simulaciones almacenadas.
+- Recuperar simulaciones en ejecución.
+- Conservar el progreso de la simulación.
+- Consultar el historial de vehículos.
+- Conservar las multas registradas.
+- Consultar estadísticas después de reiniciar el backend.
+
+Las simulaciones finalizadas conservan sus resultados históricos y no pueden reanudarse como simulaciones activas.
+
+### 9. Validación de solicitudes
+
+La API REST valida los datos recibidos y responde con códigos HTTP según el resultado de las operaciones.
+
+Entre los códigos utilizados se encuentran:
+
+- `200 OK`: solicitud procesada correctamente.
+- `400 Bad Request`: datos inválidos o incompletos.
+- `404 Not Found`: recurso inexistente.
+- `409 Conflict`: operación incompatible con el estado actual.
+
+## Tecnologías utilizadas
+
+### Backend
+
+**C++20**
+
+Lenguaje principal utilizado para implementar los algoritmos, el motor de simulación y la lógica del sistema.
+
+**Crow**
+
+Framework utilizado para desarrollar el servidor HTTP y los endpoints de la API REST.
+
+**CMake**
+
+Herramienta utilizada para configurar y compilar el proyecto C++.
+
+**vcpkg**
+
+Administrador de dependencias utilizado en la configuración del entorno C++.
+
+### Base de datos
+
+**MySQL / MariaDB**
+
+Sistema de base de datos relacional utilizado para almacenar vehículos, simulaciones, calles, multas y demás información del proyecto.
+
+El backend se comunica con la base de datos para realizar consultas, inserciones y actualizaciones.
+
+### Frontend
+
+**HTML5**
+
+Define la estructura de la interfaz web.
+
+**CSS3**
+
+Permite establecer la apariencia visual de la aplicación.
+
+**JavaScript**
+
+Administra la interacción del usuario, las solicitudes a la API y la actualización de la interfaz.
+
+**Canvas 2D**
+
+Permite representar gráficamente la intersección y el movimiento de los vehículos.
+
+### Herramientas de desarrollo
+
+**CLion**
+
+Entorno de desarrollo utilizado para trabajar con el proyecto C++.
+
+**Git**
+
+Sistema de control de versiones utilizado para registrar los cambios.
+
+**GitHub**
+
+Plataforma utilizada para almacenar y compartir el repositorio del proyecto.
 
 ## Arquitectura del sistema
 
-El proyecto se organizará en tres componentes principales:
+SISTRA utiliza una arquitectura dividida en tres componentes principales.
 
-**Frontend:** desarrollado con HTML5, CSS3, JavaScript y Canvas 2D. Se encargará de mostrar la interfaz gráfica y las animaciones.
+### Frontend
 
-**Backend:** desarrollado en C++20 con Crow. Contendrá los algoritmos, las reglas de negocio, el motor de simulación y los servicios de la aplicación.
+Desarrollado con HTML, CSS y JavaScript.
 
-**Base de datos:** implementada en MySQL. Almacenará los datos necesarios para el funcionamiento del sistema y los resultados de las simulaciones.
+Se encarga de presentar la información, permitir la interacción del usuario y representar gráficamente la simulación.
 
-## Estructura del proyecto
+### Backend
 
-- `backend/`: código fuente y configuración del servidor C++.
-- `frontend/`: páginas web, estilos, scripts y recursos gráficos.
-- `database/`: scripts para la creación y configuración de MySQL.
-- `docs/`: documentación técnica e instrucciones de instalación.
-- `CMakeLists.txt`: configuración principal de compilación.
-- `vcpkg.json`: declaración de dependencias de C++.
-- `.gitignore`: archivos y carpetas excluidos del repositorio.
+Desarrollado en C++20 utilizando Crow.
 
-## Instalación y ejecución
+Contiene:
 
-Las instrucciones de instalación y configuración del proyecto estarán disponibles en el archivo `docs/INSTALACION.md`.
+- Rutas de la API REST.
+- Servicios de lógica de negocio.
+- Motor de simulación.
+- Administración de vehículos.
+- Control de semáforos.
+- Control de velocidad.
+- Generación de multas.
+- Cálculo de estadísticas.
+- Operaciones de persistencia.
 
-Se documentará cómo clonar el repositorio desde GitHub, abrirlo en CLion, configurar las dependencias, preparar MySQL, compilar el backend y ejecutar la aplicación web.
+### Base de datos
 
+Implementada mediante MySQL.
+
+Almacena la información necesaria para ejecutar las simulaciones y conservar sus resultados.
+
+## Estructura general del proyecto
+
+El repositorio está organizado en componentes para separar las responsabilidades del sistema.
+
+```text
+SISTRA/
+├── backend/
+├── frontend/
+├── database/
+├── docs/
+├── CMakeLists.txt
+├── vcpkg.json
+├── .gitignore
+└── README.md
+```
+
+Las carpetas cumplen las siguientes funciones:
+
+- `backend/`: código fuente del servidor y lógica desarrollada en C++.
+- `frontend/`: archivos de la interfaz web.
+- `database/`: scripts relacionados con la base de datos.
+- `docs/`: documentación técnica y de uso.
+- `CMakeLists.txt`: configuración de compilación.
+- `vcpkg.json`: declaración de dependencias.
+- `.gitignore`: configuración de archivos excluidos del control de versiones.
 
 ## API REST
 
-SISTRA cuenta con un backend desarrollado en C++20 utilizando Crow.
+El backend de SISTRA utiliza Crow para exponer servicios HTTP.
 
-El servidor HTTP se ejecuta localmente en:
+La dirección local utilizada durante el desarrollo es:
 
-http://localhost:18080
+`http://localhost:18080`
 
+### Endpoints generales
 
-### Endpoints disponibles
-
-| Metodo | Endpoint | Descripcion |
+| Método | Endpoint | Descripción |
 |--------|----------|-------------|
-| GET | /api/health | Verifica el servidor HTTP |
-| GET | /api/sistema | Consulta informacion del sistema |
-| GET | /api/calles | Consulta las calles de la interseccion |
-| GET | /api/database/status | Verifica la conexion con MySQL |
-| GET | /api/vehiculos | Consulta vehiculos activos |
-| GET | /api/vehiculos/{id} | Consulta un vehiculo |
-| POST | /api/vehiculos | Registra un vehiculo |
-| GET | /api/simulaciones | Consulta todas las simulaciones |
-| GET | /api/simulaciones/{id} | Consulta una simulacion |
-| POST | /api/simulaciones/{id}/vehiculos | Incorpora un vehiculo a una simulacion |
-| GET | /api/simulaciones/{id}/vehiculos | Consulta los vehiculos de una simulacion |
+| GET | `/api/health` | Verifica el funcionamiento del servidor |
+| GET | `/api/sistema` | Consulta información del sistema |
+| GET | `/api/calles` | Consulta las calles de la intersección |
+| GET | `/api/database/status` | Verifica la conexión con la base de datos |
 
-La documentacion completa se encuentra en:
+### Endpoints de vehículos
 
-[Documentacion de la API](docs/API.md)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/vehiculos` | Consulta los vehículos registrados |
+| GET | `/api/vehiculos/{id}` | Consulta un vehículo específico |
+| POST | `/api/vehiculos` | Registra un vehículo |
 
-Los endpoints para vehiculos, simulaciones, semaforos, multas y estadisticas se incorporaran en las siguientes fases.
+### Endpoints de simulaciones
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/simulaciones` | Consulta el listado de simulaciones |
+| GET | `/api/simulaciones/{id}` | Consulta una simulación |
+| POST | `/api/simulaciones/{id}/vehiculos` | Agrega un vehículo a una simulación |
+| GET | `/api/simulaciones/{id}/vehiculos` | Consulta los vehículos de una simulación |
+| POST | `/api/simulaciones/{id}/iniciar` | Inicia una simulación configurada |
+| POST | `/api/simulaciones/{id}/avanzar` | Avanza un segundo de simulación |
+| POST | `/api/simulaciones/{id}/avanzar-multiples` | Avanza varios segundos |
+| GET | `/api/simulaciones/{id}/estado` | Consulta el estado del motor de una simulación en ejecución |
+| GET | `/api/simulaciones/{id}/estadisticas` | Consulta estadísticas de una simulación |
+
+### Ejemplo: avanzar varios segundos
+
+Solicitud:
+
+```http
+POST /api/simulaciones/9/avanzar-multiples
+Content-Type: application/json
+```
+
+Cuerpo JSON:
+
+```json
+{
+  "segundos": 10
+}
+```
+
+El campo `segundos` debe contener un número entero entre 1 y 3600.
+
+El backend valida el contenido de la solicitud y el estado de la simulación antes de ejecutar el avance.
+
+### Ejemplo: consultar estadísticas
+
+```http
+GET /api/simulaciones/9/estadisticas
+```
+
+La respuesta incluye información sobre el estado de la simulación, la cantidad de vehículos, las estadísticas por calle y las multas registradas.
+
+El identificador `9` corresponde a una simulación utilizada durante las pruebas de integración y debe sustituirse por el identificador que se desee consultar.
+
+Para información adicional, consultar:
+
+[Documentación de la API](docs/API.md)
+
+## Instalación y ejecución
+
+### Requisitos generales
+
+Para trabajar con el proyecto se requiere:
+
+- Un entorno compatible con C++20.
+- CMake.
+- CLion o un entorno de desarrollo compatible.
+- Las dependencias C++ configuradas para el proyecto.
+- MySQL o MariaDB.
+- Un navegador web.
+- Git para clonar el repositorio.
+
+### Clonar el repositorio
+
+```bash
+git clone https://github.com/jyuman-umg/SISTRA.git
+```
+
+### Abrir el proyecto
+
+1. Abrir CLion.
+2. Seleccionar la opción para abrir un proyecto existente.
+3. Seleccionar la carpeta de SISTRA.
+4. Permitir que CMake cargue la configuración del proyecto.
+5. Verificar que las dependencias estén disponibles.
+
+### Configurar la base de datos
+
+Preparar MySQL utilizando los scripts y la configuración del proyecto.
+
+La base de datos debe encontrarse disponible para que el backend pueda realizar las operaciones de persistencia.
+
+### Ejecutar el backend
+
+Compilar y ejecutar el servidor C++ desde CLion utilizando la configuración correspondiente.
+
+Durante el desarrollo, el servidor se ejecuta en:
+
+`http://localhost:18080`
+
+### Utilizar la interfaz web
+
+Abrir la interfaz web del proyecto desde el entorno local configurado.
+
+La interfaz se comunica con el backend para consultar información y controlar las simulaciones.
+
+Las instrucciones técnicas adicionales se documentan en:
+
+[Guía de instalación](docs/INSTALACION.md)
+
+## Pruebas de integración
+
+Durante la Fase 11 se realizaron pruebas para verificar el funcionamiento conjunto del backend, el motor de simulación y la base de datos.
+
+Entre las comprobaciones realizadas se encuentran:
+
+- Registro de vehículos en simulaciones.
+- Inicio de simulaciones configuradas.
+- Avance individual y múltiple del tiempo simulado.
+- Finalización de simulaciones.
+- Registro de multas por exceso de velocidad.
+- Prevención de multas duplicadas.
+- Recuperación de simulaciones después de reiniciar el servidor.
+- Persistencia de resultados.
+- Consulta de estadísticas.
+- Consulta del historial de vehículos.
+- Validación de solicitudes incorrectas.
+- Manejo de errores HTTP 400, 404 y 409.
+
+Estas pruebas permitieron comprobar las principales operaciones del sistema.
 
 ## Estado del proyecto
 
-**Fase 1 de 13 — Configuración inicial.**
+**Fase 12 de 13 - Documentación del proyecto.**
 
-Actualmente se está preparando la estructura base del proyecto y el entorno de desarrollo.
+### Fases desarrolladas
 
-Las funcionalidades de simulación, conexión a MySQL e interfaz web se implementarán progresivamente en las siguientes fases.
+Las Fases 1 a 11 comprenden la preparación del entorno, el desarrollo de los componentes del sistema, la implementación del motor de simulación, la interfaz gráfica, los semáforos, el control de velocidad, la persistencia y las pruebas de integración.
+
+### Fase actual
+
+**Fase 12 - Documentación**
+
+Se está actualizando la documentación general y técnica del proyecto para facilitar su instalación, comprensión y utilización.
+
+### Fase pendiente
+
+**Fase 13 - Entrega final**
+
+Comprenderá la preparación y revisión de los elementos necesarios para presentar el proyecto terminado.
+
+## Repositorio
+
+El código fuente de SISTRA se encuentra disponible en GitHub:
+
+https://github.com/jyuman-umg/SISTRA
+
+## Autor
+
+**Jefferson Gadiel Yuman Pérez**  
+**Curso:** Algoritmos  
+**Proyecto:** 18 - Intersección Semaforizada  
+**Variante:** A
