@@ -11,6 +11,7 @@ add_executable(SISTRA
         src/routes/ApiRoutes.cpp
         src/routes/VehiculoRoutes.cpp
         src/routes/SimulacionRoutes.cpp
+        src/simulation/SimulationEngine.cpp
 )
 
 target_compile_features(SISTRA
