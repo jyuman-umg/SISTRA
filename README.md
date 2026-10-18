@@ -132,16 +132,24 @@ El servidor HTTP se ejecuta localmente en:
 
 http://localhost:18080
 
+
 ### Endpoints disponibles
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
-| GET | /api/health | Verifica el funcionamiento del servidor |
-| GET | /api/sistema | Devuelve informacion general del sistema |
-| GET | /api/calles | Consulta las calles registradas en MySQL |
+| GET | /api/health | Verifica el servidor HTTP |
+| GET | /api/sistema | Consulta informacion del sistema |
+| GET | /api/calles | Consulta las calles de la interseccion |
 | GET | /api/database/status | Verifica la conexion con MySQL |
+| GET | /api/vehiculos | Consulta vehiculos activos |
+| GET | /api/vehiculos/{id} | Consulta un vehiculo |
+| POST | /api/vehiculos | Registra un vehiculo |
+| GET | /api/simulaciones | Consulta todas las simulaciones |
+| GET | /api/simulaciones/{id} | Consulta una simulacion |
+| POST | /api/simulaciones/{id}/vehiculos | Incorpora un vehiculo a una simulacion |
+| GET | /api/simulaciones/{id}/vehiculos | Consulta los vehiculos de una simulacion |
 
-La documentacion completa de la API se encuentra en:
+La documentacion completa se encuentra en:
 
 [Documentacion de la API](docs/API.md)
 

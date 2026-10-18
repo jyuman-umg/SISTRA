@@ -1,6 +1,8 @@
 #include <crow.h>
 #include <iostream>
 #include "routes/ApiRoutes.h"
+#include "routes/VehiculoRoutes.h"
+#include "routes/SimulacionRoutes.h"
 
 int main() {
     crow::SimpleApp app;
@@ -13,6 +15,8 @@ int main() {
               << std::endl;
 
     registerApiRoutes(app);
+    registerVehiculoRoutes(app);
+    registerSimulacionRoutes(app);
 
     std::cout << std::endl;
     std::cout << "Servidor SISTRA iniciado."

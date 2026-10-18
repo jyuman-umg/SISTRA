@@ -9,6 +9,8 @@ add_executable(SISTRA
         src/main.cpp
         src/database/DatabaseConnection.cpp
         src/routes/ApiRoutes.cpp
+        src/routes/VehiculoRoutes.cpp
+        src/routes/SimulacionRoutes.cpp
 )
 
 target_compile_features(SISTRA
