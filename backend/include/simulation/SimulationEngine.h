@@ -1,5 +1,6 @@
 #ifndef SISTRA_SIMULATION_ENGINE_H
 #define SISTRA_SIMULATION_ENGINE_H
+
 #include <array>
 #include <string>
 #include <vector>
@@ -75,6 +76,10 @@ public:
     bool avanzarSegundo();
 
     void reiniciar();
+
+    // FASE 11: Reconstruir el estado del motor
+    // reproduciendo los segundos anteriores.
+    void reconstruirHastaSegundo(int segundoObjetivo);
 
     int obtenerSegundoActual() const;
 

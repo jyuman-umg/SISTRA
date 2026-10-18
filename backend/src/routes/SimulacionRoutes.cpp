@@ -205,6 +205,8 @@ namespace {
             );
 
         item["estado"] = getValue(row, "Estado");
+        item["segundoActual"] =
+            std::stoi(getValue(row, "SegundoActual"));
 
         item["totalVehiculos"] =
             std::stoi(getValue(row, "TotalVehiculos"));
@@ -221,7 +223,8 @@ namespace {
         "IdSimulacion, Nombre, Descripcion, "
         "FechaCreacion, FechaInicio, FechaFin, "
         "HoraSimuladaInicio, DuracionSimuladaSegundos, "
-        "Estado, TotalVehiculos, TotalVehiculosFinalizados ";
+        "Estado, TotalVehiculos, TotalVehiculosFinalizados, "
+        "SegundoActual ";
 
     crow::json::wvalue vehicleToJson(
         const std::map<std::string, std::string>& row
@@ -410,25 +413,165 @@ namespace {
             db.executePrepared(
                 "UPDATE Simulaciones SET "
                 "TotalVehiculosFinalizados = ?, "
+                "SegundoActual = ?, "
                 "Estado = 'Finalizada', "
                 "FechaFin = NOW() "
                 "WHERE IdSimulacion = ?",
                 {
                     std::to_string(resumen.finalizados),
+                    std::to_string(resumen.segundoActual),
                     std::to_string(idSimulacion)
                 }
             );
         } else {
             db.executePrepared(
                 "UPDATE Simulaciones SET "
-                "TotalVehiculosFinalizados = ? "
+                "TotalVehiculosFinalizados = ?, "
+                "SegundoActual = ? "
                 "WHERE IdSimulacion = ?",
                 {
                     std::to_string(resumen.finalizados),
+                    std::to_string(resumen.segundoActual),
                     std::to_string(idSimulacion)
                 }
             );
         }
+    }
+
+    // FASE 11: Reconstruir una simulacion activa desde MySQL.
+    // Requiere simulationMutex bloqueado por el llamador.
+    // No modifica MySQL ni registra multas.
+    // Los registros antiguos con SegundoActual = 0 y estados
+    // diferentes del inicio se rechazan por inconsistencia.
+    enum class RecoveryResult {
+        Recuperada,
+        NoExiste,
+        NoEjecutando,
+        Inconsistente
+    };
+
+    RecoveryResult recoverSimulation(
+        DatabaseConnection& db,
+        int idSimulacion,
+        std::string& detail
+    ) {
+        const auto rows = db.selectPrepared(
+            "SELECT Estado, DuracionSimuladaSegundos, "
+            "SegundoActual, TotalVehiculos, "
+            "TotalVehiculosFinalizados "
+            "FROM Simulaciones WHERE IdSimulacion = ?",
+            {std::to_string(idSimulacion)}
+        );
+
+        if (rows.empty()) {
+            detail = "La simulacion no existe";
+            return RecoveryResult::NoExiste;
+        }
+
+        const auto& row = rows.front();
+        if (getValue(row, "Estado") != "Ejecutando") {
+            detail = "La simulacion no esta en estado Ejecutando";
+            return RecoveryResult::NoEjecutando;
+        }
+
+        const int duracion = std::stoi(
+            getValue(row, "DuracionSimuladaSegundos")
+        );
+        const int segundo = std::stoi(
+            getValue(row, "SegundoActual")
+        );
+        if (duracion <= 0 || segundo < 0 || segundo >= duracion) {
+            detail = "Duracion o segundo guardado invalido";
+            return RecoveryResult::Inconsistente;
+        }
+
+        const auto records = db.selectPrepared(
+            "SELECT sv.IdSimulacionVehiculo, sv.IdVehiculo, "
+            "sv.IdCalle, sv.Velocidad, sv.SegundoLlegada, "
+            "sv.Estado, sv.SegundoInicioCruce, "
+            "sv.SegundoSalida, sv.TiempoEsperaSegundos, "
+            "v.Placa "
+            "FROM SimulacionVehiculos sv "
+            "INNER JOIN Vehiculos v "
+            "ON v.IdVehiculo = sv.IdVehiculo "
+            "WHERE sv.IdSimulacion = ? "
+            "ORDER BY sv.SegundoLlegada, sv.IdSimulacionVehiculo",
+            {std::to_string(idSimulacion)}
+        );
+
+        if (records.empty() ||
+            static_cast<int>(records.size()) !=
+                std::stoi(getValue(row, "TotalVehiculos"))) {
+            detail = "Cantidad de vehiculos inconsistente";
+            return RecoveryResult::Inconsistente;
+        }
+
+        SimulationEngine engine(duracion);
+        for (const auto& record : records) {
+            VehiculoSimulado vehiculo;
+            vehiculo.idSimulacionVehiculo = std::stoi(
+                getValue(record, "IdSimulacionVehiculo")
+            );
+            vehiculo.idVehiculo = std::stoi(
+                getValue(record, "IdVehiculo")
+            );
+            vehiculo.idCalle = std::stoi(
+                getValue(record, "IdCalle")
+            );
+            vehiculo.velocidad = std::stod(
+                getValue(record, "Velocidad")
+            );
+            vehiculo.segundoLlegada = std::stoi(
+                getValue(record, "SegundoLlegada")
+            );
+            vehiculo.placa = getValue(record, "Placa");
+            engine.agregarVehiculo(vehiculo);
+        }
+
+        engine.reconstruirHastaSegundo(segundo);
+
+        const auto& reconstruidos = engine.obtenerVehiculos();
+        for (std::size_t i = 0; i < records.size(); ++i) {
+            const auto& record = records[i];
+            const auto& vehiculo = reconstruidos[i];
+
+            // Los NULL de MySQL se representan como cadena vacia.
+            const auto coincideSegundo = [ &record ](
+                const std::string& columna, int valor
+            ) {
+                const std::string guardado = getValue(record, columna);
+                return valor == -1
+                    ? guardado.empty()
+                    : !guardado.empty() && std::stoi(guardado) == valor;
+            };
+
+            if (vehiculo.idSimulacionVehiculo != std::stoi(
+                    getValue(record, "IdSimulacionVehiculo")) ||
+                SimulationEngine::estadoComoTexto(vehiculo.estado) !=
+                    getValue(record, "Estado") ||
+                vehiculo.tiempoEsperaSegundos != std::stoi(
+                    getValue(record, "TiempoEsperaSegundos")) ||
+                !coincideSegundo(
+                    "SegundoInicioCruce", vehiculo.segundoInicioCruce
+                ) ||
+                !coincideSegundo("SegundoSalida", vehiculo.segundoSalida)) {
+                detail = "Los vehiculos guardados no coinciden con "
+                         "la reconstruccion del segundo " +
+                         std::to_string(segundo) +
+                         ". No se recupero la simulacion.";
+                return RecoveryResult::Inconsistente;
+            }
+        }
+
+        if (engine.obtenerResumen().finalizados != std::stoi(
+                getValue(row, "TotalVehiculosFinalizados"))) {
+            detail = "El total de finalizados no coincide con MySQL";
+            return RecoveryResult::Inconsistente;
+        }
+
+        activeSimulations.emplace(idSimulacion, std::move(engine));
+        detail = "Simulacion recuperada correctamente";
+        return RecoveryResult::Recuperada;
     }
 
     // Ejecuta uno o varios segundos con una sola
@@ -452,20 +595,6 @@ namespace {
 
         std::lock_guard<std::mutex> lock(simulationMutex);
 
-        auto it = activeSimulations.find(idSimulacion);
-
-        if (it == activeSimulations.end()) {
-            return errorResponse(
-                409, "Simulacion no activa en memoria"
-            );
-        }
-
-        if (it->second.haFinalizado()) {
-            return errorResponse(
-                409, "La simulacion ya termino"
-            );
-        }
-
         DatabaseConnection db;
 
         if (!connectDatabase(db)) {
@@ -477,6 +606,26 @@ namespace {
         bool transactionStarted = false;
 
         try {
+            auto it = activeSimulations.find(idSimulacion);
+            if (it == activeSimulations.end()) {
+                std::string detail;
+                const auto result = recoverSimulation(
+                    db, idSimulacion, detail
+                );
+                if (result != RecoveryResult::Recuperada) {
+                    return errorResponse(
+                        result == RecoveryResult::NoExiste ? 404 : 409,
+                        detail
+                    );
+                }
+                it = activeSimulations.find(idSimulacion);
+            }
+
+            if (it->second.haFinalizado()) {
+                return errorResponse(
+                    409, "La simulacion ya termino"
+                );
+            }
             // No modificar el motor original hasta
             // confirmar la transaccion.
             SimulationEngine siguiente = it->second;
@@ -513,8 +662,8 @@ namespace {
             transactionStarted = true;
 
             const auto simulaciones = db.selectPrepared(
-                "SELECT Estado, HoraSimuladaInicio "
-                "FROM Simulaciones "
+                "SELECT Estado, HoraSimuladaInicio, "
+                "SegundoActual FROM Simulaciones "
                 "WHERE IdSimulacion = ? "
                 "FOR UPDATE",
                 {std::to_string(idSimulacion)}
@@ -539,6 +688,21 @@ namespace {
                 return errorResponse(
                     409,
                     "La simulacion no esta en estado Ejecutando"
+                );
+            }
+
+            // Evitar avances desde un motor desactualizado.
+            const int segundoPersistido = std::stoi(
+                getValue(simulaciones.front(), "SegundoActual")
+            );
+
+            if (segundoPersistido != segundoAnterior) {
+                db.rollbackTransaction();
+                transactionStarted = false;
+
+                return errorResponse(
+                    409,
+                    "El segundo en memoria no coincide con MySQL"
                 );
             }
 
@@ -1256,6 +1420,7 @@ void registerSimulacionRoutes(crow::App<crow::CORSHandler>& app) {
             db.executePrepared(
                 "UPDATE Simulaciones SET "
                 "Estado = 'Ejecutando', "
+                "SegundoActual = 0, "
                 "FechaInicio = NOW(), "
                 "FechaFin = NULL, "
                 "TotalVehiculosFinalizados = 0 "
@@ -1425,22 +1590,39 @@ void registerSimulacionRoutes(crow::App<crow::CORSHandler>& app) {
             simulationMutex
         );
 
-        const auto it =
-            activeSimulations.find(idSimulacion);
+        try {
+            auto it = activeSimulations.find(idSimulacion);
+            if (it == activeSimulations.end()) {
+                DatabaseConnection db;
+                if (!connectDatabase(db)) {
+                    return errorResponse(
+                        503, "No se pudo conectar con MySQL"
+                    );
+                }
 
-        if (it == activeSimulations.end()) {
+                std::string detail;
+                const auto result = recoverSimulation(
+                    db, idSimulacion, detail
+                );
+                if (result != RecoveryResult::Recuperada) {
+                    return errorResponse(
+                        result == RecoveryResult::NoExiste ? 404 : 409,
+                        detail
+                    );
+                }
+                it = activeSimulations.find(idSimulacion);
+            }
+
+            crow::json::wvalue response = summaryToJson(
+                idSimulacion, it->second
+            );
+            return crow::response(200, response);
+        } catch (const std::exception& error) {
+            std::cerr << "Error recuperando simulacion: "
+                      << error.what() << std::endl;
             return errorResponse(
-                404,
-                "No existe una simulacion activa en memoria"
+                500, "Error al recuperar la simulacion"
             );
         }
-
-        crow::json::wvalue response =
-            summaryToJson(
-                idSimulacion,
-                it->second
-            );
-
-        return crow::response(200, response);
     });
 }

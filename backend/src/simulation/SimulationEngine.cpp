@@ -1,4 +1,5 @@
 #include "simulation/SimulationEngine.h"
+
 #include <algorithm>
 #include <cmath>
 #include <stdexcept>
@@ -192,6 +193,47 @@ void SimulationEngine::reiniciar() {
         v.segundoInicioCruce = -1;
         v.segundoSalida = -1;
         v.tiempoEsperaSegundos = 0;
+    }
+}
+
+// =====================================================
+// FASE 11: RECONSTRUIR SIMULACION HASTA UN SEGUNDO
+// =====================================================
+
+void SimulationEngine::reconstruirHastaSegundo(
+    int segundoObjetivo
+) {
+    if (segundoObjetivo < 0 ||
+        segundoObjetivo > duracionSegundos) {
+
+        throw std::invalid_argument(
+            "El segundo objetivo esta fuera "
+            "de la duracion de la simulacion"
+        );
+    }
+
+    // Reconstruir desde el estado inicial.
+    reiniciar();
+
+    // Reproducir los segundos anteriores
+    // utilizando las mismas reglas del motor.
+    for (int segundo = 0;
+         segundo < segundoObjetivo;
+         ++segundo) {
+
+        if (!avanzarSegundo()) {
+            throw std::runtime_error(
+                "No se pudo reconstruir la simulacion"
+            );
+        }
+    }
+
+    // Verificar que se alcanzo el segundo esperado.
+    if (segundoActual != segundoObjetivo) {
+        throw std::runtime_error(
+            "El segundo reconstruido no coincide "
+            "con el segundo solicitado"
+        );
     }
 }
 
