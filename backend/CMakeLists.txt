@@ -1,13 +1,14 @@
-
 # =====================================================
 # SISTRA - CONFIGURACION DEL BACKEND
 # =====================================================
 
 find_package(unofficial-libmariadb CONFIG REQUIRED)
+find_package(Crow CONFIG REQUIRED)
 
 add_executable(SISTRA
         src/main.cpp
         src/database/DatabaseConnection.cpp
+        src/routes/ApiRoutes.cpp
 )
 
 target_compile_features(SISTRA
@@ -23,4 +24,17 @@ target_include_directories(SISTRA
 target_link_libraries(SISTRA
         PRIVATE
         unofficial::libmariadb
+        Crow::Crow
 )
+
+# =====================================================
+# BIBLIOTECAS DE WINDOWS
+# =====================================================
+
+if(WIN32)
+    target_link_libraries(SISTRA
+            PRIVATE
+            ws2_32
+            mswsock
+    )
+endif()

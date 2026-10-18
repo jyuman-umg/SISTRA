@@ -123,6 +123,30 @@ Las instrucciones de instalación y configuración del proyecto estarán disponi
 
 Se documentará cómo clonar el repositorio desde GitHub, abrirlo en CLion, configurar las dependencias, preparar MySQL, compilar el backend y ejecutar la aplicación web.
 
+
+## API REST
+
+SISTRA cuenta con un backend desarrollado en C++20 utilizando Crow.
+
+El servidor HTTP se ejecuta localmente en:
+
+http://localhost:18080
+
+### Endpoints disponibles
+
+| Metodo | Endpoint | Descripcion |
+|--------|----------|-------------|
+| GET | /api/health | Verifica el funcionamiento del servidor |
+| GET | /api/sistema | Devuelve informacion general del sistema |
+| GET | /api/calles | Consulta las calles registradas en MySQL |
+| GET | /api/database/status | Verifica la conexion con MySQL |
+
+La documentacion completa de la API se encuentra en:
+
+[Documentacion de la API](docs/API.md)
+
+Los endpoints para vehiculos, simulaciones, semaforos, multas y estadisticas se incorporaran en las siguientes fases.
+
 ## Estado del proyecto
 
 **Fase 1 de 13 — Configuración inicial.**

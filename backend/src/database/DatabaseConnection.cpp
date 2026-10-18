@@ -1,6 +1,7 @@
 #include "database/DatabaseConnection.h"
 #include <cstdlib>
 #include <iostream>
+#include <stdexcept>
 
 DatabaseConnection::DatabaseConnection()
     : connection(nullptr) {
@@ -119,6 +120,56 @@ bool DatabaseConnection::executeQuery(
 
     return true;
 }
+
+
+std::vector<std::map<std::string, std::string>>
+DatabaseConnection::select(const std::string& query) {
+
+    std::vector<std::map<std::string, std::string>> records;
+
+    if (!isConnected()) {
+        throw std::runtime_error(
+            "No existe una conexion activa con MySQL."
+        );
+    }
+
+    if (mysql_query(connection, query.c_str()) != 0) {
+        throw std::runtime_error(
+            std::string("Error al ejecutar consulta: ") +
+            mysql_error(connection)
+        );
+    }
+
+    MYSQL_RES* result = mysql_store_result(connection);
+
+    if (result == nullptr) {
+        throw std::runtime_error(
+            std::string("Error al obtener resultados: ") +
+            mysql_error(connection)
+        );
+    }
+
+    const unsigned int columnCount = mysql_num_fields(result);
+    MYSQL_FIELD* fields = mysql_fetch_fields(result);
+
+    MYSQL_ROW row;
+
+    while ((row = mysql_fetch_row(result)) != nullptr) {
+        std::map<std::string, std::string> record;
+
+        for (unsigned int i = 0; i < columnCount; i++) {
+            record[fields[i].name] =
+                row[i] != nullptr ? row[i] : "";
+        }
+
+        records.push_back(std::move(record));
+    }
+
+    mysql_free_result(result);
+
+    return records;
+}
+
 
 void DatabaseConnection::disconnect() {
     if (connection != nullptr) {

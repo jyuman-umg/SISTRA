@@ -2,7 +2,10 @@
 #define SISTRA_DATABASE_CONNECTION_H
 
 #include <mysql.h>
+
 #include <string>
+#include <vector>
+#include <map>
 
 class DatabaseConnection {
 private:
@@ -24,6 +27,10 @@ public:
     );
 
     bool executeQuery(const std::string& query);
+
+    std::vector<std::map<std::string, std::string>> select(
+        const std::string& query
+    );
 
     void disconnect();
 
