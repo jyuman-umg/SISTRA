@@ -1,0 +1,43 @@
+# CLion y JetBrains
+.idea/
+*.iml
+
+# CMake
+cmake-build-*/
+build/
+out/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+
+# Ejecutables y archivos compilados
+*.exe
+*.dll
+*.so
+*.dylib
+*.o
+*.obj
+*.a
+*.lib
+*.pdb
+
+# Archivos temporales
+*.tmp
+*.log
+*.bak
+*.swp
+.DS_Store
+Thumbs.db
+
+# Configuracion privada
+.env
+.env.local
+.env.*.local
+
+# Dependencias instaladas
+vcpkg_installed/
+node_modules/
+
+# Archivos locales de MySQL
+*.sql.bak
