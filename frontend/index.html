@@ -25,6 +25,10 @@
 
 <main class="container">
 
+    <!-- =====================================================
+         PANEL DE SIMULACION
+         ===================================================== -->
+
     <section class="panel">
         <h2>Panel de simulacion</h2>
 
@@ -79,6 +83,10 @@
         <p id="simulationMessage" class="message"></p>
     </section>
 
+    <!-- =====================================================
+         ESTADISTICAS
+         ===================================================== -->
+
     <section class="stats-grid">
 
         <article class="stat-card">
@@ -108,12 +116,80 @@
 
     </section>
 
+    <!-- =====================================================
+         INTERSECCION 2D - FASE 8
+         ===================================================== -->
+
+    <section class="panel intersection-panel">
+        <div class="intersection-header">
+            <div>
+                <h2>Simulacion grafica de la interseccion</h2>
+                <p class="intersection-description">
+                    Representacion visual de las cuatro calles,
+                    los vehiculos y los semaforos en tiempo simulado.
+                </p>
+            </div>
+
+            <div class="intersection-status">
+                <span class="intersection-status-dot"></span>
+                <span id="intersectionStatus">
+                    Esperando simulacion
+                </span>
+            </div>
+        </div>
+
+        <div class="intersection-container">
+            <canvas
+                    id="intersectionCanvas"
+                    width="900"
+                    height="650"
+                    aria-label="Representacion grafica de la interseccion vehicular">
+                Tu navegador no soporta Canvas 2D.
+            </canvas>
+        </div>
+
+        <div class="intersection-legend">
+            <div class="legend-item">
+                <span class="legend-color legend-programado"></span>
+                <span>Programado</span>
+            </div>
+
+            <div class="legend-item">
+                <span class="legend-color legend-encola"></span>
+                <span>En espera</span>
+            </div>
+
+            <div class="legend-item">
+                <span class="legend-color legend-cruzando"></span>
+                <span>Cruzando</span>
+            </div>
+
+            <div class="legend-item">
+                <span class="legend-color legend-finalizado"></span>
+                <span>Finalizado</span>
+            </div>
+        </div>
+
+        <p class="intersection-note">
+            Los movimientos se representan utilizando los estados
+            calculados por el motor de simulacion de SISTRA.
+        </p>
+    </section>
+
+    <!-- =====================================================
+         ESTADO DE LOS SEMAFOROS
+         ===================================================== -->
+
     <section class="panel">
         <h2>Estado de los semaforos</h2>
 
         <div id="trafficLights" class="traffic-grid">
         </div>
     </section>
+
+    <!-- =====================================================
+         VEHICULOS DE LA SIMULACION
+         ===================================================== -->
 
     <section class="panel">
         <h2>Vehiculos de la simulacion</h2>
@@ -148,6 +224,11 @@
     SISTRA - Sistema de Simulacion de Trafico
 </footer>
 
+<!-- =====================================================
+     SCRIPTS
+     ===================================================== -->
+
+<script src="js/intersection.js"></script>
 <script src="js/app.js"></script>
 
 </body>
