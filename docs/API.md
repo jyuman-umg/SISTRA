@@ -195,3 +195,200 @@ En las siguientes fases se implementaran:
 - Estadisticas de trafico.
 - Integracion con el frontend web.
 ```
+---
+
+# Fase 4 - Gestion de Vehiculos y Simulaciones
+
+## 8. Gestion de vehiculos
+
+### GET /api/vehiculos
+
+Consulta todos los vehiculos activos registrados en MySQL.
+
+Respuesta exitosa: HTTP 200.
+
+La respuesta incluye:
+
+- success
+- message
+- total
+- data
+
+Cada vehiculo contiene su identificador, placa, tipo, fecha de registro y estado.
+
+### GET /api/vehiculos/{id}
+
+Consulta un vehiculo activo por su identificador.
+
+Respuestas:
+
+- HTTP 200: vehiculo encontrado.
+- HTTP 400: identificador invalido.
+- HTTP 404: vehiculo inexistente o inactivo.
+- HTTP 503: conexion con MySQL no disponible.
+- HTTP 500: error interno.
+
+### POST /api/vehiculos
+
+Registra un vehiculo nuevo.
+
+Ejemplo de solicitud:
+
+```json
+{
+  "placa": "P123ABC",
+  "tipoVehiculo": "Automovil"
+}
+```
+
+Tipos permitidos:
+
+- Automovil
+- Motocicleta
+- Camion
+- Bus
+
+Validaciones:
+
+- La placa es obligatoria.
+- La placa debe tener entre 5 y 10 caracteres alfanumericos.
+- La placa se convierte a mayusculas.
+- El tipo de vehiculo debe ser valido.
+- No se permiten placas duplicadas.
+
+Respuestas:
+
+- HTTP 201: vehiculo registrado.
+- HTTP 400: datos invalidos.
+- HTTP 409: placa duplicada.
+- HTTP 503: conexion no disponible.
+- HTTP 500: error interno.
+
+## 9. Gestion de simulaciones
+
+### GET /api/simulaciones
+
+Consulta todas las simulaciones registradas.
+
+Respuesta exitosa: HTTP 200.
+
+Cada simulacion incluye:
+
+- Identificador
+- Nombre
+- Descripcion
+- Fechas de creacion, inicio y finalizacion
+- Hora simulada de inicio
+- Duracion en segundos
+- Estado
+- Total de vehiculos
+- Total de vehiculos finalizados
+
+### GET /api/simulaciones/{id}
+
+Consulta una simulacion especifica.
+
+Respuestas:
+
+- HTTP 200: simulacion encontrada.
+- HTTP 400: identificador invalido.
+- HTTP 404: simulacion inexistente.
+- HTTP 503: conexion no disponible.
+- HTTP 500: error interno.
+
+### POST /api/simulaciones/{id}/vehiculos
+
+Incorpora un vehiculo existente a una simulacion.
+
+Ejemplo de solicitud:
+
+```json
+{
+  "idVehiculo": 1,
+  "idCalle": 1,
+  "velocidad": 65,
+  "segundoLlegada": 10
+}
+```
+
+Validaciones:
+
+- La simulacion debe existir.
+- La simulacion debe estar en estado Configurada.
+- El vehiculo debe existir y estar activo.
+- La calle debe existir y estar activa.
+- La velocidad no puede ser negativa.
+- El segundo de llegada debe estar dentro de la duracion.
+- Un vehiculo no puede registrarse dos veces en la misma simulacion.
+
+El servidor calcula HoraLlegada utilizando la hora simulada de inicio y SegundoLlegada.
+
+El registro del vehiculo y la actualizacion de TotalVehiculos se realizan mediante una transaccion MySQL.
+
+Respuestas:
+
+- HTTP 201: vehiculo incorporado.
+- HTTP 400: datos invalidos.
+- HTTP 404: simulacion, vehiculo o calle inexistente.
+- HTTP 409: vehiculo duplicado o simulacion no configurable.
+- HTTP 503: conexion no disponible.
+- HTTP 500: error interno.
+
+### GET /api/simulaciones/{id}/vehiculos
+
+Consulta los vehiculos incorporados a una simulacion.
+
+La respuesta incluye:
+
+- Placa y tipo de vehiculo.
+- Calle de ingreso.
+- Velocidad.
+- Hora y segundo de llegada.
+- Hora y segundo de inicio de cruce.
+- Hora y segundo de salida.
+- Tiempo de espera.
+- Estado del vehiculo.
+
+Los vehiculos se ordenan por SegundoLlegada.
+
+## 10. Estados de los vehiculos
+
+Los vehiculos de una simulacion pueden encontrarse en:
+
+- Programado: todavia no llega a la interseccion.
+- EnCola: llego y espera su turno.
+- Cruzando: esta atravesando la interseccion.
+- Finalizado: completo su recorrido.
+
+La transicion entre estos estados se implementara en la fase 5.
+
+## 11. Estructura de archivos
+
+```text
+backend/
+├── include/
+│   ├── database/
+│   │   └── DatabaseConnection.h
+│   └── routes/
+│       ├── ApiRoutes.h
+│       ├── VehiculoRoutes.h
+│       └── SimulacionRoutes.h
+├── src/
+│   ├── database/
+│   │   └── DatabaseConnection.cpp
+│   ├── routes/
+│   │   ├── ApiRoutes.cpp
+│   │   ├── VehiculoRoutes.cpp
+│   │   └── SimulacionRoutes.cpp
+│   └── main.cpp
+└── CMakeLists.txt
+```
+
+## 12. Seguridad e integridad
+
+- Consultas parametrizadas para operaciones con datos externos.
+- Validacion de datos recibidos en JSON.
+- Restricciones de claves foraneas en MySQL.
+- Restriccion UNIQUE para placas y vehiculos por simulacion.
+- Transacciones para mantener consistentes los registros.
+- Credenciales de MySQL configuradas mediante variables de entorno.

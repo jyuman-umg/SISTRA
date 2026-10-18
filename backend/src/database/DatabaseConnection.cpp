@@ -2,6 +2,8 @@
 #include <cstdlib>
 #include <iostream>
 #include <stdexcept>
+#include <memory>
+#include <utility>
 
 DatabaseConnection::DatabaseConnection()
     : connection(nullptr) {
@@ -168,6 +170,424 @@ DatabaseConnection::select(const std::string& query) {
     mysql_free_result(result);
 
     return records;
+}
+
+unsigned long long DatabaseConnection::insert(
+    const std::string& query,
+    const std::vector<std::string>& parameters
+) {
+    if (!isConnected()) {
+        throw std::runtime_error(
+            "No existe una conexion activa con MySQL."
+        );
+    }
+
+    MYSQL_STMT* statement = mysql_stmt_init(connection);
+
+    if (statement == nullptr) {
+        throw std::runtime_error(
+            "No se pudo inicializar la consulta preparada."
+        );
+    }
+
+    std::unique_ptr<MYSQL_STMT, decltype(&mysql_stmt_close)>
+        statementGuard(statement, &mysql_stmt_close);
+
+    if (mysql_stmt_prepare(
+            statement,
+            query.c_str(),
+            static_cast<unsigned long>(query.size())
+        ) != 0) {
+
+        throw std::runtime_error(
+            std::string("Error preparando INSERT: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    if (mysql_stmt_param_count(statement) != parameters.size()) {
+        throw std::runtime_error(
+            "La cantidad de parametros no coincide con la consulta."
+        );
+    }
+
+    std::vector<MYSQL_BIND> bindings(parameters.size());
+    std::vector<unsigned long> lengths(parameters.size());
+
+    for (std::size_t i = 0; i < parameters.size(); i++) {
+        MYSQL_BIND binding{};
+
+        lengths[i] =
+            static_cast<unsigned long>(parameters[i].size());
+
+        binding.buffer_type = MYSQL_TYPE_STRING;
+        binding.buffer =
+            const_cast<char*>(parameters[i].data());
+        binding.buffer_length = lengths[i];
+        binding.length = &lengths[i];
+
+        bindings[i] = binding;
+    }
+
+    if (!bindings.empty() &&
+        mysql_stmt_bind_param(statement, bindings.data()) != 0) {
+
+        throw std::runtime_error(
+            std::string("Error vinculando parametros: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    if (mysql_stmt_execute(statement) != 0) {
+        throw std::runtime_error(
+            std::string("Error ejecutando INSERT: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    return static_cast<unsigned long long>(
+        mysql_stmt_insert_id(statement)
+    );
+}
+
+
+std::vector<std::map<std::string, std::string>>
+DatabaseConnection::selectPrepared(
+    const std::string& query,
+    const std::vector<std::string>& parameters
+) {
+    if (!isConnected()) {
+        throw std::runtime_error(
+            "No existe una conexion activa con MySQL."
+        );
+    }
+
+    MYSQL_STMT* statement = mysql_stmt_init(connection);
+
+    if (statement == nullptr) {
+        throw std::runtime_error(
+            "No se pudo inicializar la consulta preparada."
+        );
+    }
+
+    std::unique_ptr<MYSQL_STMT, decltype(&mysql_stmt_close)>
+        statementGuard(statement, &mysql_stmt_close);
+
+    if (mysql_stmt_prepare(
+            statement,
+            query.c_str(),
+            static_cast<unsigned long>(query.size())
+        ) != 0) {
+
+        throw std::runtime_error(
+            std::string("Error preparando SELECT: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    if (mysql_stmt_param_count(statement) != parameters.size()) {
+        throw std::runtime_error(
+            "La cantidad de parametros no coincide con la consulta."
+        );
+    }
+
+    std::vector<MYSQL_BIND> parameterBindings(parameters.size());
+    std::vector<unsigned long> parameterLengths(parameters.size());
+
+    for (std::size_t i = 0; i < parameters.size(); i++) {
+        MYSQL_BIND binding{};
+
+        parameterLengths[i] =
+            static_cast<unsigned long>(parameters[i].size());
+
+        binding.buffer_type = MYSQL_TYPE_STRING;
+        binding.buffer =
+            const_cast<char*>(parameters[i].data());
+        binding.buffer_length = parameterLengths[i];
+        binding.length = &parameterLengths[i];
+
+        parameterBindings[i] = binding;
+    }
+
+    if (!parameterBindings.empty() &&
+        mysql_stmt_bind_param(
+            statement,
+            parameterBindings.data()
+        ) != 0) {
+
+        throw std::runtime_error(
+            std::string("Error vinculando parametros: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    if (mysql_stmt_execute(statement) != 0) {
+        throw std::runtime_error(
+            std::string("Error ejecutando SELECT: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    MYSQL_RES* metadata = mysql_stmt_result_metadata(statement);
+
+    if (metadata == nullptr) {
+        throw std::runtime_error(
+            "La consulta no devolvio columnas."
+        );
+    }
+
+    std::unique_ptr<MYSQL_RES, decltype(&mysql_free_result)>
+        metadataGuard(metadata, &mysql_free_result);
+
+    const unsigned int columnCount =
+        mysql_num_fields(metadata);
+
+    MYSQL_FIELD* fields = mysql_fetch_fields(metadata);
+
+    std::vector<std::string> columnNames;
+    columnNames.reserve(columnCount);
+
+    for (unsigned int i = 0; i < columnCount; i++) {
+        columnNames.emplace_back(fields[i].name);
+    }
+
+    if (mysql_stmt_store_result(statement) != 0) {
+        throw std::runtime_error(
+            std::string("Error almacenando resultados: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    std::vector<MYSQL_BIND> resultBindings(columnCount);
+    std::vector<unsigned long> resultLengths(columnCount);
+    std::vector<my_bool> nullFlags(columnCount);
+    std::vector<std::vector<char>> buffers(
+        columnCount,
+        std::vector<char>(256)
+    );
+
+    for (unsigned int i = 0; i < columnCount; i++) {
+        MYSQL_BIND binding{};
+
+        binding.buffer_type = MYSQL_TYPE_STRING;
+        binding.buffer = buffers[i].data();
+        binding.buffer_length =
+            static_cast<unsigned long>(buffers[i].size());
+        binding.length = &resultLengths[i];
+        binding.is_null = &nullFlags[i];
+
+        resultBindings[i] = binding;
+    }
+
+    if (mysql_stmt_bind_result(
+            statement,
+            resultBindings.data()
+        ) != 0) {
+
+        throw std::runtime_error(
+            std::string("Error vinculando resultados: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    std::vector<std::map<std::string, std::string>> records;
+
+    int fetchStatus;
+
+    while ((fetchStatus = mysql_stmt_fetch(statement)) == 0 ||
+           fetchStatus == MYSQL_DATA_TRUNCATED) {
+
+        std::map<std::string, std::string> record;
+
+        for (unsigned int i = 0; i < columnCount; i++) {
+            if (nullFlags[i]) {
+                record[columnNames[i]] = "";
+                continue;
+            }
+
+            if (resultLengths[i] > buffers[i].size()) {
+                buffers[i].resize(resultLengths[i]);
+
+                MYSQL_BIND columnBinding{};
+                columnBinding.buffer_type = MYSQL_TYPE_STRING;
+                columnBinding.buffer = buffers[i].data();
+                columnBinding.buffer_length =
+                    static_cast<unsigned long>(buffers[i].size());
+                columnBinding.length = &resultLengths[i];
+
+                if (mysql_stmt_fetch_column(
+                        statement,
+                        &columnBinding,
+                        i,
+                        0
+                    ) != 0) {
+
+                    throw std::runtime_error(
+                        "Error recuperando una columna."
+                    );
+                }
+            }
+
+            record[columnNames[i]] = std::string(
+                buffers[i].data(),
+                resultLengths[i]
+            );
+        }
+
+        records.push_back(std::move(record));
+    }
+
+    if (fetchStatus != MYSQL_NO_DATA) {
+        throw std::runtime_error(
+            std::string("Error recuperando filas: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    return records;
+}
+
+
+bool DatabaseConnection::beginTransaction() {
+    if (!isConnected()) {
+        std::cerr << "No existe una conexion activa."
+                  << std::endl;
+        return false;
+    }
+
+    if (mysql_autocommit(connection, 0) != 0) {
+        std::cerr << "Error iniciando transaccion: "
+                  << mysql_error(connection)
+                  << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseConnection::commitTransaction() {
+    if (!isConnected()) {
+        return false;
+    }
+
+    if (mysql_commit(connection) != 0) {
+        std::cerr << "Error confirmando transaccion: "
+                  << mysql_error(connection)
+                  << std::endl;
+        return false;
+    }
+
+    if (mysql_autocommit(connection, 1) != 0) {
+        std::cerr << "Error restaurando autocommit: "
+                  << mysql_error(connection)
+                  << std::endl;
+        return false;
+    }
+
+    return true;
+}
+
+bool DatabaseConnection::rollbackTransaction() {
+    if (!isConnected()) {
+        return false;
+    }
+
+    const bool rollbackSuccess =
+        mysql_rollback(connection) == 0;
+
+    if (!rollbackSuccess) {
+        std::cerr << "Error revirtiendo transaccion: "
+                  << mysql_error(connection)
+                  << std::endl;
+    }
+
+    if (mysql_autocommit(connection, 1) != 0) {
+        std::cerr << "Error restaurando autocommit: "
+                  << mysql_error(connection)
+                  << std::endl;
+        return false;
+    }
+
+    return rollbackSuccess;
+}
+
+
+unsigned long long DatabaseConnection::executePrepared(
+    const std::string& query,
+    const std::vector<std::string>& parameters
+) {
+    if (!isConnected()) {
+        throw std::runtime_error(
+            "No existe una conexion activa con MySQL."
+        );
+    }
+
+    MYSQL_STMT* statement = mysql_stmt_init(connection);
+
+    if (statement == nullptr) {
+        throw std::runtime_error(
+            "No se pudo inicializar la consulta preparada."
+        );
+    }
+
+    std::unique_ptr<MYSQL_STMT, decltype(&mysql_stmt_close)>
+        statementGuard(statement, &mysql_stmt_close);
+
+    if (mysql_stmt_prepare(
+            statement,
+            query.c_str(),
+            static_cast<unsigned long>(query.size())
+        ) != 0) {
+
+        throw std::runtime_error(
+            std::string("Error preparando consulta: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    if (mysql_stmt_param_count(statement) != parameters.size()) {
+        throw std::runtime_error(
+            "La cantidad de parametros no coincide con la consulta."
+        );
+    }
+
+    std::vector<MYSQL_BIND> bindings(parameters.size());
+    std::vector<unsigned long> lengths(parameters.size());
+
+    for (std::size_t i = 0; i < parameters.size(); i++) {
+        MYSQL_BIND binding{};
+
+        lengths[i] =
+            static_cast<unsigned long>(parameters[i].size());
+
+        binding.buffer_type = MYSQL_TYPE_STRING;
+        binding.buffer =
+            const_cast<char*>(parameters[i].data());
+        binding.buffer_length = lengths[i];
+        binding.length = &lengths[i];
+
+        bindings[i] = binding;
+    }
+
+    if (!bindings.empty() &&
+        mysql_stmt_bind_param(statement, bindings.data()) != 0) {
+
+        throw std::runtime_error(
+            std::string("Error vinculando parametros: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    if (mysql_stmt_execute(statement) != 0) {
+        throw std::runtime_error(
+            std::string("Error ejecutando consulta: ") +
+            mysql_stmt_error(statement)
+        );
+    }
+
+    return static_cast<unsigned long long>(
+        mysql_stmt_affected_rows(statement)
+    );
 }
 
 

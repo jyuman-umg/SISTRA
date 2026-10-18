@@ -3,9 +3,9 @@
 
 #include <mysql.h>
 
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
 
 class DatabaseConnection {
 private:
@@ -31,6 +31,34 @@ public:
     std::vector<std::map<std::string, std::string>> select(
         const std::string& query
     );
+
+    // Ejecuta una consulta INSERT con parametros seguros.
+    unsigned long long insert(
+        const std::string& query,
+        const std::vector<std::string>& parameters
+    );
+
+    // Ejecuta UPDATE o DELETE utilizando parametros seguros.
+    unsigned long long executePrepared(
+        const std::string& query,
+        const std::vector<std::string>& parameters
+    );
+
+    // Consulta registros utilizando parametros seguros.
+    std::vector<std::map<std::string, std::string>> selectPrepared(
+        const std::string& query,
+        const std::vector<std::string>& parameters
+    );
+
+
+    // Inicia una transaccion en MySQL.
+    bool beginTransaction();
+
+    // Confirma los cambios de la transaccion.
+    bool commitTransaction();
+
+    // Revierte los cambios de la transaccion.
+    bool rollbackTransaction();
 
     void disconnect();
 
