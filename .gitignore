@@ -41,3 +41,24 @@ node_modules/
 
 # Archivos locales de MySQL
 *.sql.bak
+
+
+# =====================================================
+# SISTRA - CONFIGURACION LOCAL
+# =====================================================
+
+.env
+.env.*
+!.env.example
+
+# Dependencias instaladas por vcpkg
+vcpkg_installed/
+
+# Archivos de compilacion
+cmake-build-*/
+build/
+out/
+
+# Credenciales y configuraciones privadas
+config.local.json
+secrets.json

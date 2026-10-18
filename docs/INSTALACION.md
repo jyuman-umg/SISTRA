@@ -1,85 +1,137 @@
 
-# Guía de instalación — SISTRA
+# Instalación de SISTRA
 
-## Proyecto 18 — Intersección Semaforizada
+## Proyecto 18 - Intersección Semaforizada
+### Variante A
 
-Esta guía explica cómo configurar, compilar y ejecutar
-el proyecto desde una computadora diferente.
+SISTRA es un sistema de simulación y control de tráfico vehicular desarrollado en C++20, con MySQL como base de datos y una interfaz web que se implementará en las siguientes fases.
 
-## 1. Requisitos iniciales
+## 1. Requisitos
 
-- Windows 10 u 11 de 64 bits.
-- Git.
-- CLion.
-- CMake 3.21 o superior.
-- Compilador compatible con C++20.
+Para compilar y ejecutar el proyecto se necesitan:
+
+- Git
+- CLion con compilador C++ compatible con C++20
+- CMake
+- Ninja
+- MySQL Server 8
+- MySQL Workbench (opcional)
+- vcpkg
+- Biblioteca libmariadb instalada mediante vcpkg
+
+En Windows se utiliza el triplet `x64-mingw-dynamic` cuando el compilador es MinGW.
 
 ## 2. Clonar el repositorio
 
-Abrir una terminal y ejecutar:
+Ejecutar:
 
 ```bash
-git clone https://github.com/USUARIO/SISTRA.git
+git clone https://github.com/jyuman-umg/SISTRA.git
 ```
 
-Reemplazar USUARIO por el propietario del repositorio.
+Abrir la carpeta SISTRA en CLion.
 
-También se puede utilizar la opción Clone Repository de CLion.
+## 3. Instalar vcpkg
 
-## 3. Abrir el proyecto
+En Windows, abrir PowerShell:
 
-1. Abrir CLion.
-2. Seleccionar Open.
-3. Seleccionar la carpeta SISTRA.
-4. Esperar a que CMake configure el proyecto.
+```powershell
+cd C:\
+git clone https://github.com/microsoft/vcpkg.git
+cd C:\vcpkg
+.\bootstrap-vcpkg.bat
+```
 
-## 4. Configurar el compilador
+Si vcpkg ya está instalado, no es necesario repetir estos pasos.
 
-En CLion, ingresar a:
+## 4. Configurar dependencias
 
-Settings > Build, Execution, Deployment > Toolchains
+El archivo `vcpkg.json` declara las bibliotecas requeridas.
 
-Verificar que se detecten correctamente:
+Para instalar las dependencias con MinGW:
 
-- Compilador C++ compatible con C++20.
-- CMake.
-- Herramienta de compilación.
-- Depurador.
+```powershell
+C:\vcpkg\vcpkg.exe install --triplet x64-mingw-dynamic --host-triplet x64-mingw-dynamic
+```
 
-## 5. Compilar y ejecutar
+El compilador MinGW debe estar disponible en PATH.
 
-1. Seleccionar el ejecutable SISTRA.
-2. Presionar Build.
-3. Ejecutar el programa.
+En algunos entornos de Windows puede ser necesario utilizar una ruta de MinGW sin espacios para compilar libmariadb correctamente.
 
-El programa mostrará un mensaje indicando
-que la configuración inicial fue exitosa.
+## 5. Crear la base de datos
 
-## 6. Dependencias futuras
+Iniciar MySQL Server 8.
 
-En las siguientes fases se incorporarán:
+Desde MySQL Workbench ejecutar los archivos en este orden:
 
-- Crow.
-- vcpkg.
-- MySQL 8.
-- MySQL Connector/C++.
-- Frontend HTML, CSS y JavaScript.
+1. `database/schema.sql`
+2. `database/seed.sql`
 
-Se agregarán instrucciones para instalar y configurar
-estas dependencias de manera reproducible.
+Esto creará la base de datos `sistra_db`, sus 11 tablas y los registros iniciales.
 
-## 7. Configuración de MySQL
+## 6. Configurar CMake en CLion
 
-Pendiente de implementación en la fase 2.
+Abrir:
 
-## 8. Ejecución de la aplicación web
+File > Settings > Build, Execution, Deployment > CMake
 
-Pendiente de implementación en la fase 3.
+En el perfil Debug agregar las siguientes opciones:
 
-## 9. Problemas frecuentes
+```text
+-DCMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic -DVCPKG_HOST_TRIPLET=x64-mingw-dynamic
+```
 
-Si CMake no detecta el compilador, revisar
-la configuración de Toolchains en CLion.
+Si vcpkg está instalado en otra ubicación, ajustar la ruta.
 
-Si el proyecto no compila, comprobar que
-el compilador soporte C++20.
+Recargar el proyecto CMake.
+
+## 7. Configurar la conexión MySQL
+
+SISTRA utiliza estas variables de entorno:
+
+- SISTRA_DB_HOST
+- SISTRA_DB_PORT
+- SISTRA_DB_USER
+- SISTRA_DB_PASSWORD
+- SISTRA_DB_NAME
+- SISTRA_DB_PLUGIN_DIR
+
+Ejemplo para PowerShell:
+
+```powershell
+$env:SISTRA_DB_HOST = "127.0.0.1"
+$env:SISTRA_DB_PORT = "3306"
+$env:SISTRA_DB_USER = "root"
+$env:SISTRA_DB_NAME = "sistra_db"
+$env:SISTRA_DB_PLUGIN_DIR = "$PWD\vcpkg_installed\x64-mingw-dynamic\plugins\libmariadb"
+```
+
+Solicitar la contraseña sin escribirla directamente en el comando:
+
+```powershell
+$securePassword = Read-Host "Contraseña MySQL" -AsSecureString
+$env:SISTRA_DB_PASSWORD = [System.Net.NetworkCredential]::new("", $securePassword).Password
+```
+
+## 8. Ejecutar SISTRA
+
+Compilar desde CLion:
+
+Build > Build Project
+
+Después, desde la carpeta raíz del proyecto:
+
+```powershell
+$env:PATH = "$PWD\vcpkg_installed\x64-mingw-dynamic\bin;$env:PATH"
+.\cmake-build-debug\backend\SISTRA.exe
+```
+
+La aplicación debe conectarse a MySQL y mostrar las calles registradas.
+
+## 9. Estado del proyecto
+
+Fase 1: Configuración inicial completada.
+
+Fase 2: Base de datos y conexión C++ con MySQL implementadas.
+
+Las siguientes fases incorporarán la API REST, los vehículos, la simulación de tráfico, los semáforos inteligentes, las cámaras y la interfaz gráfica.
