@@ -1,6 +1,6 @@
 /* =====================================================
    SISTRA - FRONTEND
-   FASE 7: CONEXION CON API REST
+   FASE 8: API REST E INTERSECCION 2D
    ===================================================== */
 
 const API_BASE = "http://localhost:18080/api";
@@ -35,6 +35,10 @@ let simulacionSeleccionada = null;
 let estadoSimulacion = null;
 let procesandoSolicitud = false;
 let versionSeleccion = 0;
+
+// Datos utilizados por el Canvas 2D.
+let ultimoEstadoGrafico = null;
+let vehiculosGraficos = [];
 
 /* =====================================================
    PETICIONES HTTP
@@ -315,6 +319,56 @@ function mostrarSemaforosIniciales() {
 }
 
 /* =====================================================
+   INTERSECCION 2D - FASE 8
+   ===================================================== */
+
+function obtenerRenderizador() {
+    return window.sistraIntersection ?? null;
+}
+
+function reiniciarInterseccion() {
+    ultimoEstadoGrafico = null;
+    vehiculosGraficos = [];
+
+    const renderizador = obtenerRenderizador();
+
+    if (renderizador) {
+        renderizador.reset();
+    }
+}
+
+function actualizarInterseccion() {
+    const renderizador = obtenerRenderizador();
+
+    if (!renderizador || !ultimoEstadoGrafico) {
+        return;
+    }
+
+    renderizador.update(
+        ultimoEstadoGrafico,
+        vehiculosGraficos
+    );
+}
+
+function guardarEstadoGrafico(datos) {
+    ultimoEstadoGrafico = datos;
+}
+
+function guardarVehiculosGraficos(vehiculos) {
+    vehiculosGraficos = Array.isArray(vehiculos)
+        ? vehiculos
+        : [];
+}
+
+function mostrarEstadoInterseccion(texto, tipo = "") {
+    const renderizador = obtenerRenderizador();
+
+    if (renderizador) {
+        renderizador.setStatus(texto, tipo);
+    }
+}
+
+/* =====================================================
    TABLA DE VEHICULOS
    ===================================================== */
 
@@ -395,9 +449,15 @@ async function consultarVehiculos(idSimulacion) {
         `/simulaciones/${idSimulacion}/vehiculos`
     );
 
-    if (simulacionSeleccionada === idSimulacion) {
-        mostrarVehiculos(datos.data || []);
+    if (simulacionSeleccionada !== idSimulacion) {
+        return;
     }
+
+    const vehiculos = datos.data || [];
+
+    mostrarVehiculos(vehiculos);
+    guardarVehiculosGraficos(vehiculos);
+    actualizarInterseccion();
 }
 
 /* =====================================================
@@ -413,13 +473,20 @@ async function consultarEstado(idSimulacion) {
         if (simulacionSeleccionada === idSimulacion) {
             actualizarEstadisticas(datos);
             mostrarSemaforos(datos);
+
+            guardarEstadoGrafico(datos);
+            actualizarInterseccion();
         }
 
         return datos;
     } catch (error) {
-        // El motor solo mantiene en memoria
-        // las simulaciones activas.
-        mostrarSemaforosIniciales();
+        if (simulacionSeleccionada === idSimulacion) {
+            mostrarSemaforosIniciales();
+
+            mostrarEstadoInterseccion(
+                "Simulacion no activa"
+            );
+        }
 
         return null;
     }
@@ -431,7 +498,6 @@ async function consultarEstado(idSimulacion) {
 
 async function seleccionarSimulacion() {
     const valor = elementos.simulationSelect.value;
-
     const versionActual = ++versionSeleccion;
 
     if (!valor) {
@@ -441,8 +507,11 @@ async function seleccionarSimulacion() {
         reiniciarEstadisticas();
         mostrarSemaforosIniciales();
         mostrarVehiculos([]);
+        reiniciarInterseccion();
 
+        mostrarMensaje("");
         actualizarBotones();
+
         return;
     }
 
@@ -454,6 +523,7 @@ async function seleccionarSimulacion() {
     reiniciarEstadisticas();
     mostrarSemaforosIniciales();
     mostrarVehiculos([]);
+    reiniciarInterseccion();
     actualizarBotones();
 
     try {
@@ -488,8 +558,22 @@ async function seleccionarSimulacion() {
                     "pero no esta activa en la memoria del servidor.",
                     "error"
                 );
+            } else {
+                mostrarMensaje(
+                    `Simulacion seleccionada: ${datos.data.nombre}`
+                );
             }
+
         } else {
+            mostrarEstadoInterseccion(
+                estadoSimulacion === "Finalizada"
+                    ? "Simulacion finalizada"
+                    : "Simulacion configurada",
+                estadoSimulacion === "Finalizada"
+                    ? "finished"
+                    : ""
+            );
+
             mostrarMensaje(
                 `Simulacion seleccionada: ${datos.data.nombre}`
             );
@@ -581,18 +665,21 @@ async function iniciarSimulacion() {
             { method: "POST" }
         );
 
-        estadoSimulacion = "Ejecutando";
+        estadoSimulacion =
+            datos.estadoSimulacion || "Ejecutando";
 
         actualizarEstadisticas(datos);
         mostrarSemaforos(datos);
+
+        guardarEstadoGrafico(datos);
+
+        await consultarVehiculos(id);
 
         mostrarMensaje(
             datos.message ||
             "Simulacion iniciada correctamente.",
             "success"
         );
-
-        await consultarVehiculos(id);
     });
 }
 
@@ -636,6 +723,8 @@ async function avanzarSimulacion(segundos) {
 
         actualizarEstadisticas(datos);
         mostrarSemaforos(datos);
+
+        guardarEstadoGrafico(datos);
 
         await consultarVehiculos(id);
 
@@ -708,6 +797,7 @@ async function inicializar() {
     reiniciarEstadisticas();
     mostrarSemaforosIniciales();
     mostrarVehiculos([]);
+    reiniciarInterseccion();
     actualizarBotones();
 
     const conectado = await verificarServidor();
@@ -717,7 +807,6 @@ async function inicializar() {
             "Inicia el backend de SISTRA en el puerto 18080.",
             "error"
         );
-
         return;
     }
 
