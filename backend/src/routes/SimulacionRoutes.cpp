@@ -311,6 +311,30 @@ namespace {
 
         response["colasPorCalle"] = std::move(colas);
 
+        // FASE 6: Estado de los semaforos inteligentes.
+        const auto& semaforos = resumen.semaforos;
+        crow::json::wvalue semaforosJson;
+        semaforosJson["segundoActual"] = semaforos.segundoActual;
+        semaforosJson["calleConPrioridad"] = semaforos.calleConPrioridad;
+        semaforosJson["segundosRestantes"] = semaforos.segundosRestantes;
+
+        const std::array<std::string, 4> nombresCalles = {
+            "Norte", "Sur", "Este", "Oeste"
+        };
+        crow::json::wvalue::list calles;
+        for (int i = 0; i < 4; ++i) {
+            crow::json::wvalue calle;
+            calle["idCalle"] = i + 1;
+            calle["nombre"] = nombresCalles[i];
+            calle["estado"] = TrafficLightController::estadoComoTexto(
+                semaforos.estados[i]
+            );
+            calle["vehiculosEnCola"] = semaforos.vehiculosEnCola[i];
+            calles.push_back(std::move(calle));
+        }
+        semaforosJson["calles"] = std::move(calles);
+        response["semaforos"] = std::move(semaforosJson);
+
         return response;
     }
 
@@ -1241,16 +1265,11 @@ void registerSimulacionRoutes(crow::SimpleApp& app) {
                 throw;
             }
 
-            crow::json::wvalue response;
-
-            response["success"] = true;
-            response["message"] =
-                "Simulacion iniciada";
-            response["idSimulacion"] =
-                idSimulacion;
-            response["segundoActual"] = 0;
-            response["totalVehiculos"] =
-                static_cast<int>(vehiculos.size());
+            crow::json::wvalue response = summaryToJson(
+                idSimulacion,
+                activeSimulations.at(idSimulacion)
+            );
+            response["message"] = "Simulacion iniciada";
 
             return crow::response(200, response);
 
