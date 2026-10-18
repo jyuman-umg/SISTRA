@@ -1,6 +1,7 @@
 #include "routes/SimulacionRoutes.h"
 #include "database/DatabaseConnection.h"
 #include "simulation/SimulationEngine.h"
+#include "traffic/SpeedControlService.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -479,6 +480,9 @@ namespace {
             // confirmar la transaccion.
             SimulationEngine siguiente = it->second;
 
+            const int segundoAnterior =
+                siguiente.obtenerSegundoActual();
+
             int segundosAvanzados = 0;
 
             for (int i = 0; i < segundos; i++) {
@@ -550,6 +554,16 @@ namespace {
                 horaBase
             );
 
+            // Registrar infracciones del intervalo avanzado
+            // dentro de la misma transaccion.
+            const int multasRegistradas =
+                SpeedControlService::registrarMultas(
+                    db,
+                    idSimulacion,
+                    segundoAnterior,
+                    siguiente.obtenerSegundoActual()
+                );
+
             if (!db.commitTransaction()) {
                 throw std::runtime_error(
                     "No se pudo confirmar la transaccion"
@@ -574,6 +588,9 @@ namespace {
 
             response["segundosAvanzados"] =
                 segundosAvanzados;
+
+            response["multasRegistradas"] =
+                multasRegistradas;
 
             response["estadoSimulacion"] =
                 terminada ? "Finalizada" : "Ejecutando";
