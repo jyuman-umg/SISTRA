@@ -684,72 +684,6 @@ Los resultados históricos siguen disponibles mediante los endpoints de consulta
 
 ### GET /api/simulaciones/{id}/estadisticas
 
-Consulta las estadísticas de una simulación.
-
-**Ejemplo:**
-
-```http
-GET /api/simulaciones/9/estadisticas
-```
-
-**Respuesta obtenida durante las pruebas de integración:**
-
-```json
-{
-  "success": true,
-  "idSimulacion": 9,
-  "nombreSimulacion": "Prueba Fase 11 - Multas",
-  "estadoSimulacion": "Finalizada",
-  "duracionSegundos": 120,
-  "estadisticas": {
-    "totalVehiculos": 1,
-    "programados": 0,
-    "enCola": 0,
-    "cruzando": 0,
-    "finalizados": 1,
-    "tiempoPromedioEsperaSegundos": 0,
-    "calles": [
-      {
-        "idCalle": 1,
-        "nombre": "Norte",
-        "totalVehiculos": 1,
-        "enCola": 0,
-        "finalizados": 1,
-        "tiempoPromedioEsperaSegundos": 0
-      },
-      {
-        "idCalle": 2,
-        "nombre": "Sur",
-        "totalVehiculos": 0,
-        "enCola": 0,
-        "finalizados": 0,
-        "tiempoPromedioEsperaSegundos": 0
-      },
-      {
-        "idCalle": 3,
-        "nombre": "Este",
-        "totalVehiculos": 0,
-        "enCola": 0,
-        "finalizados": 0,
-        "tiempoPromedioEsperaSegundos": 0
-      },
-      {
-        "idCalle": 4,
-        "nombre": "Oeste",
-        "totalVehiculos": 0,
-        "enCola": 0,
-        "finalizados": 0,
-        "tiempoPromedioEsperaSegundos": 0
-      }
-    ],
-    "multas": {
-      "totalMultas": 1,
-      "montoTotal": 600
-    }
-  }
-}
-```
-
 ### Estadísticas generales
 
 El sistema permite conocer:
@@ -796,8 +730,6 @@ Las estadísticas permiten consultar:
 - Cantidad total de multas.
 - Monto acumulado de las multas.
 
-Durante las pruebas se verificó el registro de una multa de Q600 para un vehículo que circulaba a 95 km/h en la calle Norte.
-
 ### Prevención de duplicados
 
 El sistema contempla la prevención de multas duplicadas al recuperar y continuar una simulación.
@@ -825,23 +757,6 @@ Entre los datos persistidos se encuentran:
 - Estados y movimientos.
 - Multas.
 - Resultados de ejecución.
-
-### Integridad de los datos
-
-El sistema utiliza mecanismos como:
-
-- Consultas parametrizadas para operaciones con datos externos.
-- Validación de solicitudes JSON.
-- Restricciones de claves foráneas.
-- Restricciones de unicidad.
-- Transacciones MySQL.
-- Configuración de credenciales mediante variables de entorno.
-
-### Transacciones
-
-Las operaciones que requieren actualizar varios registros relacionados utilizan transacciones para mantener la consistencia de los datos.
-
-Por ejemplo, la incorporación de un vehículo a una simulación actualiza tanto el registro del vehículo asociado como el total de vehículos de la simulación.
 
 ## 13. Recuperación de simulaciones
 
@@ -974,75 +889,27 @@ El archivo `main.cpp` participa en la inicialización y ejecución del backend.
 
 El archivo `CMakeLists.txt` configura la compilación del proyecto.
 
-## 17. Pruebas de integración realizadas
-
-Durante la Fase 11 se realizaron pruebas para verificar el funcionamiento conjunto de los componentes principales.
-
-### Operaciones verificadas
-
-- Incorporación de vehículos.
-- Inicio de simulaciones.
-- Avance individual.
-- Avance múltiple.
-- Finalización automática.
-- Registro de multas.
-- Prevención de multas duplicadas.
-- Recuperación después de reiniciar el backend.
-- Persistencia de vehículos.
-- Persistencia de estadísticas.
-- Consulta de simulaciones.
-- Consulta de resultados históricos.
-- Validación de solicitudes inválidas.
-- Manejo de errores HTTP.
-
-### Validaciones de avance múltiple
-
-Se verificaron los siguientes casos:
-
-| Solicitud | Resultado esperado y obtenido |
-|---|---|
-| `segundos = 0` | HTTP 400 |
-| `segundos = 3601` | HTTP 400 |
-| `segundos = 1.5` | HTTP 400 |
-| `segundos = "10"` | HTTP 400 |
-| JSON mal formado | HTTP 400 |
-| Campo `segundos` ausente | HTTP 400 |
-
-### Validaciones de estado
-
-También se comprobó que:
-
-- No puede iniciarse una simulación finalizada.
-- No pueden agregarse vehículos a una simulación que ya no está configurada.
-- No puede avanzarse una simulación finalizada.
-- Una simulación inexistente devuelve HTTP 404.
-- Una simulación finalizada no puede recuperarse como activa.
-
-### Persistencia histórica
-
-Después de reiniciar el backend se verificó que la simulación 9 conservara:
-
-- Estado `Finalizada`.
-- Duración de 120 segundos.
-- Segundo actual 120.
-- Un vehículo finalizado.
-- Una multa registrada.
-- Monto total de multas de Q600.
-
-También se confirmó que sus estadísticas y el historial del vehículo continuaban disponibles.
-
-## 18. Estado de la documentación
-
-**Fase 12 de 13 - Documentación del proyecto.**
-
-Las funcionalidades principales de la API REST y sus pruebas de integración corresponden a las fases desarrolladas previamente.
-
-Este documento reúne las rutas, reglas, ejemplos y resultados conocidos hasta la Fase 11.
-
-La Fase 13 corresponde a la preparación de la entrega final.
-
-## 19. Repositorio
+## 17. Repositorio
 
 El código fuente del proyecto se encuentra disponible en:
 
 https://github.com/jyuman-umg/SISTRA
+
+
+## Endpoints de simulación utilizados en la versión final
+
+Las rutas siguientes se comprobaron en el código de `SimulacionRoutes.cpp` de la versión utilizada para incorporar multas individuales:
+
+| Método | Ruta | Propósito |
+|---|---|---|
+| GET | `/api/simulaciones` | Listar simulaciones |
+| POST | `/api/simulaciones` | Crear simulación |
+| GET | `/api/simulaciones/{id}` | Consultar simulación |
+| POST | `/api/simulaciones/{id}/vehiculos` | Agregar vehículo |
+| GET | `/api/simulaciones/{id}/vehiculos` | Consultar vehículos y datos asociados |
+| POST | `/api/simulaciones/{id}/iniciar` | Iniciar |
+| POST | `/api/simulaciones/{id}/avanzar` | Avanzar un segundo |
+| POST | `/api/simulaciones/{id}/avanzar-multiples` | Avanzar varios segundos |
+| GET | `/api/simulaciones/{id}/estado` | Estado actual |
+| GET | `/api/simulaciones/{id}/estadisticas` | Estadísticas |
+

@@ -8,6 +8,14 @@
     <title>SISTRA - Control de Trafico</title>
 
     <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .intersection-panel .simulation-actions { margin-top: 18px; margin-bottom: 8px; flex-wrap: wrap; }
+        .intersection-panel #simulationMessage { margin: 8px 0 16px; }
+        .sistra-form { display:flex; flex-wrap:wrap; align-items:end; gap:14px; margin:16px 0 12px; }
+        .sistra-form .field { flex:1 1 170px; min-width:150px; }
+        .sistra-form input, .sistra-form select { box-sizing:border-box; width:100%; min-height:40px; padding:8px 10px; border:1px solid #cbd5e1; border-radius:7px; background:white; color:#0f172a; }
+        .sistra-form button { min-height:40px; }
+    </style>
 </head>
 <body>
 
@@ -24,6 +32,31 @@
 </header>
 
 <main class="container">
+
+    <!-- CREACION DE SIMULACIONES Y VEHICULOS -->
+    <section class="panel" aria-labelledby="creationTitle">
+        <h2 id="creationTitle">Configurar nueva simulación</h2>
+        <form id="createSimulationForm" class="sistra-form">
+            <div class="field"><label for="newSimulationName">Nombre de la simulación</label><input id="newSimulationName" required maxlength="100" placeholder="Ej. Tráfico de hora pico"></div>
+            <div class="field"><label for="newSimulationDescription">Descripción (opcional)</label><input id="newSimulationDescription" maxlength="255" placeholder="Escenario a simular"></div>
+            <div class="field"><label for="newSimulationTime">Hora de inicio</label><input id="newSimulationTime" type="time" value="06:00" required></div>
+            <div class="field"><label for="newSimulationDuration">Duración (segundos)</label><input id="newSimulationDuration" type="number" min="1" max="86400" value="120" required></div>
+            <button id="createSimulationButton" type="submit" class="button button-primary">Crear simulación</button>
+        </form>
+        <p id="creationMessage" class="message" aria-live="polite"></p>
+        <h3>Agregar vehículo a la simulación seleccionada</h3>
+        <p>Solo se pueden agregar vehículos mientras la simulación esté configurada.</p>
+        <form id="addVehicleForm" class="sistra-form">
+            <div class="field"><label for="vehiclePlate">Placa</label><input id="vehiclePlate" maxlength="10" minlength="5" required placeholder="P123ABC"></div>
+            <div class="field"><label for="vehicleType">Tipo de vehículo</label><select id="vehicleType"><option>Automovil</option><option>Motocicleta</option><option>Camion</option><option>Bus</option></select></div>
+            <div class="field"><label for="vehicleStreet">Calle de llegada</label><select id="vehicleStreet"><option value="1">Norte</option><option value="2">Sur</option><option value="3">Este</option><option value="4">Oeste</option></select></div>
+            <div class="field"><label for="vehicleSpeed">Velocidad (km/h)</label><input id="vehicleSpeed" type="number" min="1" max="250" step="0.01" value="45" required></div>
+            <div class="field"><label for="vehicleArrival">Segundo de llegada</label><input id="vehicleArrival" type="number" min="0" value="0" required></div>
+            <button id="addVehicleButton" type="submit" class="button button-primary">Registrar y agregar vehículo</button>
+        </form>
+        <p id="vehicleCreationMessage" class="message" aria-live="polite"></p>
+    </section>
+
 
     <!-- =====================================================
          PANEL DE SIMULACION
@@ -56,31 +89,6 @@
             </button>
         </div>
 
-        <div class="simulation-actions">
-            <button id="advanceButton"
-                    class="button button-secondary">
-                Avanzar 1 segundo
-            </button>
-
-            <div class="field">
-                <label for="secondsInput">
-                    Segundos
-                </label>
-
-                <input id="secondsInput"
-                       type="number"
-                       min="1"
-                       max="3600"
-                       value="10">
-            </div>
-
-            <button id="advanceMultipleButton"
-                    class="button button-primary">
-                Avanzar tiempo
-            </button>
-        </div>
-
-        <p id="simulationMessage" class="message"></p>
     </section>
 
     <!-- =====================================================
@@ -186,6 +194,33 @@
             </div>
         </div>
 
+
+        <div class="simulation-actions">
+            <button id="advanceButton"
+                    class="button button-secondary">
+                Avanzar 1 segundo
+            </button>
+
+            <div class="field">
+                <label for="secondsInput">
+                    Segundos
+                </label>
+
+                <input id="secondsInput"
+                       type="number"
+                       min="1"
+                       max="3600"
+                       value="10">
+            </div>
+
+            <button id="advanceMultipleButton"
+                    class="button button-primary">
+                Avanzar tiempo
+            </button>
+        </div>
+
+        <p id="simulationMessage" class="message"></p>
+
         <div class="intersection-container">
             <canvas
                     id="intersectionCanvas"
@@ -252,12 +287,13 @@
                     <th>Velocidad</th>
                     <th>Estado</th>
                     <th>Espera</th>
+                    <th>Multa</th>
                 </tr>
                 </thead>
 
                 <tbody id="vehiclesTable">
                 <tr>
-                    <td colspan="6">
+                    <td colspan="7">
                         Selecciona una simulacion.
                     </td>
                 </tr>

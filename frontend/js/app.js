@@ -1,6 +1,8 @@
+
 /* =====================================================
    SISTRA - FRONTEND
-   FASE 10: SIMULACION, INTERSECCION 2D Y ESTADISTICAS
+   SIMULACION, INTERSECCION 2D Y ESTADISTICAS
+   CREACION DE SIMULACIONES Y VEHICULOS
    ===================================================== */
 
 const API_BASE = "http://localhost:18080/api";
@@ -27,6 +29,15 @@ const elementos = {
     statisticsStatus: document.getElementById("statisticsStatus"),
     trafficLights: document.getElementById("trafficLights"),
     vehiclesTable: document.getElementById("vehiclesTable")
+};
+
+const creacion = {
+    formSimulacion: document.getElementById("createSimulationForm"),
+    formVehiculo: document.getElementById("addVehicleForm"),
+    botonSimulacion: document.getElementById("createSimulationButton"),
+    botonVehiculo: document.getElementById("addVehicleButton"),
+    mensajeSimulacion: document.getElementById("creationMessage"),
+    mensajeVehiculo: document.getElementById("vehicleCreationMessage")
 };
 
 const calles = [
@@ -101,6 +112,15 @@ function mostrarMensaje(mensaje, tipo = "") {
         `message ${tipo}`.trim();
 }
 
+function mensajeCreacion(elemento, mensaje, tipo = "") {
+    if (!elemento) {
+        return;
+    }
+
+    elemento.textContent = mensaje;
+    elemento.className = `message ${tipo}`.trim();
+}
+
 /* =====================================================
    CONTROLES
    ===================================================== */
@@ -124,9 +144,24 @@ function actualizarBotones() {
 
     elementos.secondsInput.disabled =
         procesandoSolicitud || !haySeleccion || !ejecutando;
+
+    actualizarControlesCreacion();
 }
 
-async function ejecutarOperacion(operacion) {
+function actualizarControlesCreacion() {
+    if (creacion.botonSimulacion) {
+        creacion.botonSimulacion.disabled = procesandoSolicitud;
+    }
+
+    if (creacion.botonVehiculo) {
+        creacion.botonVehiculo.disabled =
+            procesandoSolicitud ||
+            simulacionSeleccionada === null ||
+            estadoSimulacion !== "Configurada";
+    }
+}
+
+async function ejecutarOperacion(operacion, destinoError = elementos.simulationMessage) {
     if (procesandoSolicitud) {
         return;
     }
@@ -137,7 +172,11 @@ async function ejecutarOperacion(operacion) {
     try {
         await operacion();
     } catch (error) {
-        mostrarMensaje(error.message, "error");
+        if (destinoError === elementos.simulationMessage) {
+            mostrarMensaje(error.message, "error");
+        } else {
+            mensajeCreacion(destinoError, error.message, "error");
+        }
     } finally {
         procesandoSolicitud = false;
         actualizarBotones();
@@ -198,7 +237,7 @@ function actualizarEstadisticas(datos) {
 }
 
 /* =====================================================
-   ESTADISTICAS DETALLADAS - FASE 10
+   ESTADISTICAS DETALLADAS
    ===================================================== */
 
 function reiniciarEstadisticasDetalladas() {
@@ -480,7 +519,7 @@ function mostrarVehiculos(vehiculos) {
         const fila = document.createElement("tr");
         const celda = document.createElement("td");
 
-        celda.colSpan = 6;
+        celda.colSpan = 7;
         celda.textContent = "No hay vehiculos registrados.";
 
         fila.appendChild(celda);
@@ -519,6 +558,25 @@ function mostrarVehiculos(vehiculos) {
             )
         );
 
+        const celdaMulta = document.createElement("td");
+        const monto = Number(vehiculo.montoMulta);
+        const cantidad = Number(vehiculo.cantidadMultas);
+        if (vehiculo.montoMulta === undefined || vehiculo.montoMulta === null) {
+            celdaMulta.textContent = "No disponible";
+        } else if (Number.isFinite(monto) && monto > 0) {
+            const etiquetaMulta = document.createElement("span");
+            etiquetaMulta.textContent = formatoQuetzales.format(monto);
+            etiquetaMulta.style.fontWeight = "700";
+            etiquetaMulta.style.color = "#b45309";
+            if (Number.isFinite(cantidad) && cantidad > 1) {
+                etiquetaMulta.title = `${cantidad} multas registradas`;
+            }
+            celdaMulta.appendChild(etiquetaMulta);
+        } else {
+            celdaMulta.textContent = "Sin multa";
+        }
+        fila.appendChild(celdaMulta);
+
         elementos.vehiclesTable.appendChild(fila);
     }
 }
@@ -527,12 +585,12 @@ function mostrarVehiculos(vehiculos) {
    CONSULTAR VEHICULOS
    ===================================================== */
 
-async function consultarVehiculos(idSimulacion) {
+async function consultarVehiculos(idSimulacion, versionActual = versionSeleccion) {
     const datos = await solicitarAPI(
         `/simulaciones/${idSimulacion}/vehiculos`
     );
 
-    if (simulacionSeleccionada !== idSimulacion) {
+    if (simulacionSeleccionada !== idSimulacion || versionActual !== versionSeleccion) {
         return;
     }
 
@@ -826,6 +884,176 @@ async function avanzarSimulacion(segundos) {
 }
 
 /* =====================================================
+   CREAR NUEVA SIMULACION
+   ===================================================== */
+
+async function crearSimulacion(evento) {
+    evento.preventDefault();
+
+    if (procesandoSolicitud) {
+        return;
+    }
+
+    const nombre = document
+        .getElementById("newSimulationName")
+        .value.trim();
+
+    const descripcion = document
+        .getElementById("newSimulationDescription")
+        .value.trim();
+
+    const duracionSimuladaSegundos = Number(
+        document.getElementById("newSimulationDuration").value
+    );
+
+    const horaInput = document
+        .getElementById("newSimulationTime")
+        .value;
+
+    if (
+        !nombre ||
+        !Number.isInteger(duracionSimuladaSegundos) ||
+        duracionSimuladaSegundos < 1 ||
+        duracionSimuladaSegundos > 86400 ||
+        !horaInput
+    ) {
+        mensajeCreacion(
+            creacion.mensajeSimulacion,
+            "Revisa los datos de la simulacion.",
+            "error"
+        );
+        return;
+    }
+
+    mensajeCreacion(creacion.mensajeSimulacion, "");
+    await ejecutarOperacion(async () => {
+        const resultado = await solicitarAPI("/simulaciones", {
+            method: "POST",
+            body: JSON.stringify({
+                nombre,
+                descripcion,
+                horaSimuladaInicio: `${horaInput}:00`,
+                duracionSimuladaSegundos
+            })
+        });
+
+        simulacionSeleccionada = null;
+
+        await cargarSimulaciones();
+
+        elementos.simulationSelect.value =
+            String(resultado.idSimulacion);
+
+        await seleccionarSimulacion();
+
+        mensajeCreacion(
+            creacion.mensajeSimulacion,
+            "Simulacion creada. Ahora agrega los vehiculos antes de iniciarla.",
+            "success"
+        );
+
+        creacion.formSimulacion.reset();
+    }, creacion.mensajeSimulacion);
+}
+
+/* =====================================================
+   REGISTRAR Y AGREGAR VEHICULO
+   ===================================================== */
+
+async function agregarVehiculo(evento) {
+    evento.preventDefault();
+
+    if (
+        procesandoSolicitud ||
+        simulacionSeleccionada === null ||
+        estadoSimulacion !== "Configurada"
+    ) {
+        return;
+    }
+
+    const idSimulacion = simulacionSeleccionada;
+
+    const placa = document
+        .getElementById("vehiclePlate")
+        .value.trim()
+        .toUpperCase();
+
+    const tipoVehiculo = document
+        .getElementById("vehicleType")
+        .value;
+
+    const idCalle = Number(
+        document.getElementById("vehicleStreet").value
+    );
+
+    const velocidad = Number(
+        document.getElementById("vehicleSpeed").value
+    );
+
+    const segundoLlegada = Number(
+        document.getElementById("vehicleArrival").value
+    );
+
+    if (
+        !/^[A-Z0-9]{5,10}$/.test(placa) ||
+        !Number.isInteger(segundoLlegada) ||
+        segundoLlegada < 0 ||
+        !Number.isFinite(velocidad) ||
+        velocidad <= 0
+    ) {
+        mensajeCreacion(
+            creacion.mensajeVehiculo,
+            "Revisa la placa, velocidad y segundo de llegada.",
+            "error"
+        );
+        return;
+    }
+
+    mensajeCreacion(creacion.mensajeVehiculo, "");
+    await ejecutarOperacion(async () => {
+        const registro = await solicitarAPI("/vehiculos", {
+            method: "POST",
+            body: JSON.stringify({
+                placa,
+                tipoVehiculo
+            })
+        });
+
+        const idVehiculo = registro.data.idVehiculo;
+
+        try {
+            await solicitarAPI(
+                `/simulaciones/${idSimulacion}/vehiculos`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({
+                        idVehiculo,
+                        idCalle,
+                        velocidad,
+                        segundoLlegada
+                    })
+                }
+            );
+        } catch (error) {
+            throw new Error(
+                `${error.message} El vehiculo ${placa} quedo registrado, ` +
+                "pero no se asigno a la simulacion."
+            );
+        }
+
+        await seleccionarSimulacion();
+
+        mensajeCreacion(
+            creacion.mensajeVehiculo,
+            `Vehiculo ${placa} agregado correctamente.`,
+            "success"
+        );
+
+        creacion.formVehiculo.reset();
+    }, creacion.mensajeVehiculo);
+}
+
+/* =====================================================
    EVENTOS
    ===================================================== */
 
@@ -869,6 +1097,20 @@ elementos.advanceMultipleButton.addEventListener(
         avanzarSimulacion(segundos);
     }
 );
+
+if (creacion.formSimulacion) {
+    creacion.formSimulacion.addEventListener(
+        "submit",
+        crearSimulacion
+    );
+}
+
+if (creacion.formVehiculo) {
+    creacion.formVehiculo.addEventListener(
+        "submit",
+        agregarVehiculo
+    );
+}
 
 /* =====================================================
    INICIALIZACION

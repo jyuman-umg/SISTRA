@@ -467,12 +467,25 @@ Entre las funcionalidades implementadas se encuentran:
 - Persistencia y recuperación.
 - Pruebas de integración.
 
-La Fase 12 corresponde a la actualización de la documentación.
-
-La Fase 13 estará destinada a la preparación de la entrega final.
 
 ## 18. Repositorio
 
 El código fuente se encuentra disponible en:
 
 https://github.com/jyuman-umg/SISTRA.git
+## 9. Abrir la interfaz web
+
+Con el ejecutable `SISTRA` en funcionamiento, abrir `http://localhost:18080/`. El mismo servidor Crow sirve el frontend y la API;
+
+Si la página no carga, verificar que el proceso se ejecute desde una ubicación desde la cual pueda encontrarse la carpeta `frontend/` del proyecto. En CLion, configurar el directorio de trabajo de la ejecución si fuera necesario.
+
+## 10. Prueba de funcionamiento
+
+1. Abrir `http://localhost:18080/api/health` y comprobar que el servidor responda.
+2. Abrir `http://localhost:18080/`.
+3. Crear una simulación, agregar vehículos con placas diferentes, iniciarla y avanzar el tiempo.
+4. Verificar los semáforos, las colas, los estados de vehículos y la columna de multas.
+5. Comprobar que los vehículos finalicen y que las estadísticas reflejen la ejecución.
+
+**Nota sobre dependencias:** si aparece un error relacionado con `caching_sha2_password.dll`, revisar la instalación de libmariadb, la ruta de plugins (`SISTRA_DB_PLUGIN_DIR`) y las DLL disponibles en el entorno de ejecución. La solución exacta depende de la instalación local.
+

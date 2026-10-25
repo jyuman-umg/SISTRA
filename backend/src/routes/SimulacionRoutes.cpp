@@ -4,6 +4,7 @@
 #include "statistics/StatisticsService.h"
 #include "traffic/SpeedControlService.h"
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
@@ -261,6 +262,9 @@ namespace {
             std::stoi(
                 getValue(row, "TiempoEsperaSegundos")
             );
+
+        item["cantidadMultas"] = std::stoi(getValue(row, "CantidadMultas"));
+        item["montoMulta"] = std::stod(getValue(row, "MontoMulta"));
 
         item["estado"] = getValue(row, "Estado");
 
@@ -1096,8 +1100,16 @@ void registerSimulacionRoutes(crow::App<crow::CORSHandler>& app) {
                 "sv.SegundoInicioCruce, "
                 "sv.SegundoSalida, "
                 "sv.TiempoEsperaSegundos, "
-                "sv.Estado "
+                "sv.Estado, "
+                "COALESCE(multas.CantidadMultas, 0) AS CantidadMultas, "
+                "COALESCE(multas.MontoMulta, 0) AS MontoMulta "
                 "FROM SimulacionVehiculos sv "
+                "LEFT JOIN ("
+                "SELECT IdSimulacionVehiculo, "
+                "COUNT(*) AS CantidadMultas, "
+                "SUM(MontoMulta) AS MontoMulta "
+                "FROM Multas GROUP BY IdSimulacionVehiculo"
+                ") multas ON multas.IdSimulacionVehiculo = sv.IdSimulacionVehiculo "
                 "INNER JOIN Vehiculos v "
                 "ON sv.IdVehiculo = v.IdVehiculo "
                 "INNER JOIN Calles c "
@@ -1145,6 +1157,92 @@ void registerSimulacionRoutes(crow::App<crow::CORSHandler>& app) {
                 500,
                 "Error al consultar vehiculos de la simulacion"
             );
+        }
+    });
+
+    // =====================================================
+    // CREAR SIMULACION DESDE EL FRONTEND
+    // =====================================================
+
+    CROW_ROUTE(app, "/api/simulaciones")
+    .methods(crow::HTTPMethod::POST)
+    ([](const crow::request& request) {
+        const auto body = crow::json::load(request.body);
+
+        if (!body || body.t() != crow::json::type::Object) {
+            return errorResponse(400, "Debe enviar un objeto JSON valido");
+        }
+
+        if (!body.has("nombre") ||
+            body["nombre"].t() != crow::json::type::String) {
+            return errorResponse(400, "El nombre es obligatorio");
+        }
+
+        const std::string nombre = body["nombre"].s();
+        if (nombre.empty() || nombre.size() > 100 ||
+            nombre.find_first_not_of(" \t\r\n") == std::string::npos) {
+            return errorResponse(400, "El nombre debe tener entre 1 y 100 caracteres");
+        }
+
+        std::string descripcion;
+        if (body.has("descripcion") &&
+            body["descripcion"].t() != crow::json::type::Null) {
+            if (body["descripcion"].t() != crow::json::type::String) {
+                return errorResponse(400, "Descripcion invalida");
+            }
+            descripcion = body["descripcion"].s();
+        }
+        if (descripcion.size() > 255) {
+            return errorResponse(400, "La descripcion supera 255 caracteres");
+        }
+
+        int duracion = 0;
+        if (!readInteger(body, "duracionSimuladaSegundos", duracion, 1, 86400)) {
+            return errorResponse(400, "La duracion debe ser de 1 a 86400 segundos");
+        }
+
+        std::string hora = "06:00:00";
+        if (body.has("horaSimuladaInicio")) {
+            if (body["horaSimuladaInicio"].t() != crow::json::type::String) {
+                return errorResponse(400, "Hora simulada invalida");
+            }
+            hora = body["horaSimuladaInicio"].s();
+        }
+
+        if (hora.size() != 8 || hora[2] != ':' || hora[5] != ':' ||
+            !std::isdigit(static_cast<unsigned char>(hora[0])) ||
+            !std::isdigit(static_cast<unsigned char>(hora[1])) ||
+            !std::isdigit(static_cast<unsigned char>(hora[3])) ||
+            !std::isdigit(static_cast<unsigned char>(hora[4])) ||
+            !std::isdigit(static_cast<unsigned char>(hora[6])) ||
+            !std::isdigit(static_cast<unsigned char>(hora[7])) ||
+            std::stoi(hora.substr(0, 2)) > 23 ||
+            std::stoi(hora.substr(3, 2)) > 59 ||
+            std::stoi(hora.substr(6, 2)) > 59) {
+            return errorResponse(400, "La hora debe tener formato HH:MM:SS");
+        }
+
+        DatabaseConnection db;
+        if (!connectDatabase(db)) {
+            return errorResponse(503, "No se pudo conectar con MySQL");
+        }
+
+        try {
+            const auto id = db.insert(
+                "INSERT INTO Simulaciones "
+                "(Nombre, Descripcion, HoraSimuladaInicio, DuracionSimuladaSegundos) "
+                "VALUES (?, ?, ?, ?)",
+                {nombre, descripcion, hora, std::to_string(duracion)}
+            );
+
+            crow::json::wvalue response;
+            response["success"] = true;
+            response["message"] = "Simulacion creada correctamente";
+            response["idSimulacion"] = static_cast<std::uint64_t>(id);
+            return crow::response(201, response);
+        } catch (const std::exception& error) {
+            std::cerr << "Error creando simulacion: " << error.what() << std::endl;
+            return errorResponse(500, "No se pudo crear la simulacion");
         }
     });
 

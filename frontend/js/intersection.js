@@ -288,43 +288,20 @@ class IntersectionRenderer {
         const cy = this.centerY;
         const half = this.halfRoad;
 
+        // Cada calle representa el ORIGEN del vehiculo.
+        // Norte circula hacia el sur, Sur hacia el norte,
+        // Este hacia el oeste y Oeste hacia el este.
         const stopDistance = half + 34;
         const spacing = 48;
-
         const directions = {
-            1: {
-                x: cx - 48,
-                y: cy - stopDistance,
-                dx: 0,
-                dy: -1,
-                angle: Math.PI
-            },
-            2: {
-                x: cx + 48,
-                y: cy + stopDistance,
-                dx: 0,
-                dy: 1,
-                angle: 0
-            },
-            3: {
-                x: cx + stopDistance,
-                y: cy - 48,
-                dx: 1,
-                dy: 0,
-                angle: Math.PI / 2
-            },
-            4: {
-                x: cx - stopDistance,
-                y: cy + 48,
-                dx: -1,
-                dy: 0,
-                angle: -Math.PI / 2
-            }
+            1: { x: cx + 48, y: cy - stopDistance, dx: 0, dy: 1, angle: Math.PI },
+            2: { x: cx - 48, y: cy + stopDistance, dx: 0, dy: -1, angle: 0 },
+            3: { x: cx + stopDistance, y: cy + 48, dx: -1, dy: 0, angle: -Math.PI / 2 },
+            4: { x: cx - stopDistance, y: cy - 48, dx: 1, dy: 0, angle: Math.PI / 2 }
         };
 
         const direction = directions[street];
-
-        if (!direction) {
+        if (!direction || state === "Finalizado") {
             return null;
         }
 
@@ -335,32 +312,26 @@ class IntersectionRenderer {
         };
 
         if (state === "Programado") {
-            position.x += direction.dx * 230;
-            position.y += direction.dy * 230;
-
+            // Aun no llega: fuera de la zona de espera.
+            position.x -= direction.dx * 230;
+            position.y -= direction.dy * 230;
         } else if (state === "EnCola") {
-            position.x += direction.dx * queueIndex * spacing;
-            position.y += direction.dy * queueIndex * spacing;
-
+            // La fila se forma detras de la linea de detencion.
+            position.x -= direction.dx * queueIndex * spacing;
+            position.y -= direction.dy * queueIndex * spacing;
         } else if (state === "Cruzando") {
-            const start = Number(
-                vehicle.segundoInicioCruce ?? this.currentSecond
-            );
+            const inicio = Number(vehicle.segundoInicioCruce);
+            const elapsed = Number.isFinite(inicio) && inicio >= 0
+                ? Math.max(0, this.currentSecond - inicio)
+                : 0;
 
-            const elapsed = Math.max(
-                0,
-                this.currentSecond - start
-            );
-
+            // Recorrido visual aproximado; el motor determina
+            // el momento real de finalizar el cruce.
             const progress = Math.min(elapsed / 5, 1);
-
             const distance = stopDistance + half * 1.8;
 
-            position.x -= direction.dx * distance * progress;
-            position.y -= direction.dy * distance * progress;
-
-        } else if (state === "Finalizado") {
-            return null;
+            position.x += direction.dx * distance * progress;
+            position.y += direction.dy * distance * progress;
         }
 
         return position;
@@ -577,23 +548,26 @@ class IntersectionRenderer {
     }
 
     drawTrafficLights() {
+        // Cada semaforo corresponde al carril de ENTRADA de su calle.
+        // Las posiciones coinciden con las definidas en positionForVehicle().
         const locations = [
-            { street: 1, x: this.centerX - 125, y: this.centerY - 125 },
-            { street: 2, x: this.centerX + 125, y: this.centerY + 125 },
-            { street: 3, x: this.centerX + 125, y: this.centerY - 125 },
-            { street: 4, x: this.centerX - 125, y: this.centerY + 125 }
+            { street: 1, name: "NORTE", x: this.centerX + 125, y: this.centerY - 125 },
+            { street: 2, name: "SUR", x: this.centerX - 125, y: this.centerY + 125 },
+            { street: 3, name: "ESTE", x: this.centerX + 125, y: this.centerY + 125 },
+            { street: 4, name: "OESTE", x: this.centerX - 125, y: this.centerY - 125 }
         ];
 
         for (const location of locations) {
             this.drawTrafficLight(
                 location.x,
                 location.y,
-                this.getTrafficLightState(location.street)
+                this.getTrafficLightState(location.street),
+                location.name
             );
         }
     }
 
-    drawTrafficLight(x, y, state) {
+    drawTrafficLight(x, y, state, streetName) {
         const ctx = this.ctx;
 
         const colors = [
@@ -606,6 +580,20 @@ class IntersectionRenderer {
         ctx.beginPath();
         ctx.roundRect(x - 12, y - 35, 24, 70, 6);
         ctx.fill();
+
+        // Identifica claramente la calle que controla el semaforo.
+        ctx.save();
+        ctx.font = "bold 12px Segoe UI";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        const labelWidth = Math.max(62, ctx.measureText(streetName).width + 16);
+        ctx.fillStyle = "rgba(15, 23, 42, 0.92)";
+        ctx.beginPath();
+        ctx.roundRect(x - labelWidth / 2, y - 63, labelWidth, 21, 5);
+        ctx.fill();
+        ctx.fillStyle = this.colors.white;
+        ctx.fillText(streetName, x, y - 52);
+        ctx.restore();
 
         colors.forEach((light, index) => {
             const cy = y - 23 + index * 23;
@@ -718,7 +706,7 @@ class IntersectionRenderer {
 }
 
 /* =====================================================
-   INSTANCIA GLOBAL DEL RENDERIZADOR
+   RENDERIZADOR
    ===================================================== */
 
 window.sistraIntersection = new IntersectionRenderer(
